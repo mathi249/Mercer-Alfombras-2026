@@ -50,8 +50,10 @@ const ChartJS = window.Chart; // referencia a la librería antes de definir el c
    Si dejás SUPABASE_URL vacío, la app funciona en modo LOCAL (localStorage)
    como respaldo, pero NO sincroniza entre dispositivos.
    ============================================================ */
-const SUPABASE_URL  = "https://limncwbtbfyzdbeegwlu.supabase.co/rest/v1/";
+let SUPABASE_URL  = "https://limncwbtbfyzdbeegwlu.supabase.co";
 const SUPABASE_KEY  = "sb_publishable_CZWZ89zbBGoRu5qZXsImtA_xAqqJ5x4";
+// Normaliza la URL: quita barra final y un /rest/v1 pegado de más, para evitar rutas dobles
+SUPABASE_URL = SUPABASE_URL.trim().replace(/\/+$/,"").replace(/\/rest\/v1$/,"");
 const TABLE  = "alfombras";
 const TABLE_V = "ventas";
 
@@ -80,21 +82,35 @@ function readLS(table){ return JSON.parse(localStorage.getItem(lsKey(table))||"[
 function writeLS(table,d){ localStorage.setItem(lsKey(table), JSON.stringify(d)); }
 
 const api = {
-  headers(){ return { "apikey":SUPABASE_KEY, "Authorization":"Bearer "+SUPABASE_KEY, "Content-Type":"application/json", "Prefer":"return=representation" }; },
+  headers(){
+    // Llaves nuevas (sb_publishable_ / sb_secret_) NO son JWT: van SOLO en el header apikey.
+    // Llaves clásicas (eyJ...) van en apikey y también en Authorization Bearer.
+    const nueva = /^sb_(publishable|secret)_/.test(SUPABASE_KEY);
+    const h = { "apikey":SUPABASE_KEY, "Content-Type":"application/json", "Prefer":"return=representation" };
+    if(!nueva) h["Authorization"]="Bearer "+SUPABASE_KEY;
+    return h;
+  },
   async list(table=TABLE){
     if(!CLOUD){
       if(table===TABLE) return JSON.parse(localStorage.getItem(LS_STOCK)||"null") || seedLocal();
       return readLS(table);
     }
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*&order=id.asc`, { headers:this.headers() });
-    if(!r.ok) throw new Error("Error al leer ("+r.status+")");
+    if(!r.ok){ const t=await r.text(); throw new Error("("+r.status+") "+t.slice(0,150)); }
     return await r.json();
   },
   async create(row,table=TABLE){
     if(!CLOUD){ const d=readLS(table); const nr={...row,id:Date.now()+Math.floor(Math.random()*1000)}; d.push(nr); writeLS(table,d); return nr; }
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method:"POST", headers:this.headers(), body:JSON.stringify(row) });
-    if(!r.ok) throw new Error("Error al crear ("+r.status+")");
+    if(!r.ok){ const t=await r.text(); throw new Error("Error al crear ("+r.status+") "+t.slice(0,120)); }
     return (await r.json())[0];
+  },
+  async createMany(rows,table=TABLE){
+    if(!rows||!rows.length) return [];
+    if(!CLOUD){ const d=readLS(table); rows.forEach(row=>d.push({...row,id:Date.now()+Math.floor(Math.random()*100000)})); writeLS(table,d); return d; }
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method:"POST", headers:this.headers(), body:JSON.stringify(rows) });
+    if(!r.ok){ const t=await r.text(); throw new Error("Error al cargar lote ("+r.status+") "+t.slice(0,150)); }
+    return await r.json();
   },
   async update(id,row,table=TABLE){
     if(!CLOUD){ const d=readLS(table); const i=d.findIndex(x=>x.id===id); if(i>=0){d[i]={...d[i],...row}; writeLS(table,d); return d[i];} return null; }
@@ -701,17 +717,33 @@ function App(){
     try{
       let data=await api.list(TABLE);
       if(CLOUD && (!data || data.length===0)){
-        // primera vez en la nube: sembrar stock
-        for(const s of SEED){ await api.create(s,TABLE); }
+        // primera vez en la nube: sembrar stock en un solo request (lote)
+        notify("Cargando stock inicial de Mercer en la nube…");
+        await api.createMany(SEED,TABLE);
         data=await api.list(TABLE);
       }
       setRows(data||[]);
       const v=await api.list(TABLE_V);
       setVentas(v||[]);
-    }catch(e){ notify(e.message,"error"); }
+      if(CLOUD && data && data.length) notify(`Conectado a la nube · ${data.length} productos`);
+    }catch(e){ notify("No se pudo leer la nube: "+e.message,"error"); }
     setLoading(false);
   };
   useEffect(()=>{ if(user) load(); },[user]);
+
+  // Resembrado manual: sube las 149 alfombras del archivo Mercer si faltan (no duplica las que ya existen por código)
+  const reseedStock=async()=>{
+    setLoading(true);
+    try{
+      const actuales=await api.list(TABLE);
+      const codigos=new Set((actuales||[]).map(r=>r.codigo));
+      const faltantes=SEED.filter(s=>!codigos.has(s.codigo));
+      if(faltantes.length===0){ notify("El stock de Mercer ya está completo","warn"); }
+      else { await api.createMany(faltantes,TABLE); notify(`Se cargaron ${faltantes.length} productos de Mercer`); }
+      const data=await api.list(TABLE); setRows(data||[]);
+    }catch(e){ notify("Error al recargar stock: "+e.message,"error"); }
+    setLoading(false);
+  };
 
   // Sincronización tiempo real: polling cada 8s en modo nube (stock + ventas)
   useEffect(()=>{
@@ -832,6 +864,7 @@ function App(){
           </nav>
           <div className="flex flex-wrap gap-2">
             {isAdmin && <button onClick={()=>{setEditing(null);setShowForm(true);}} className="px-4 py-2 rounded-xl bg-ink text-white text-sm font-semibold hover:bg-sand-900">+ Compra</button>}
+            {isAdmin && <button onClick={reseedStock} className="px-3 py-2 rounded-xl border border-sand-300 text-sm hover:bg-sand-100" title="Recargar el stock inicial de Mercer (no borra ni duplica lo existente)">♻️ Stock Mercer</button>}
             <div className="flex gap-1">
               <button onClick={()=>exportExcel(rows)} className="px-3 py-2 rounded-xl border border-sand-300 text-sm hover:bg-sand-100" title="Excel">📗</button>
               <button onClick={()=>exportCSV(rows)} className="px-3 py-2 rounded-xl border border-sand-300 text-sm hover:bg-sand-100" title="CSV">📄</button>
