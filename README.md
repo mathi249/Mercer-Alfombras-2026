@@ -14,8 +14,8 @@ Diseño con la estética Mercer (neutros cálidos, tipografía serif).
 | Usuario         | Clave      | Rol                                   |
 |-----------------|------------|---------------------------------------|
 | Administrador1  | Mercer1    | Acceso completo (alta/edición/borrado/exportar) |
-| Administrador2  | Merce2     | Acceso completo                        |
-| Administrador3  | Merce3     | Acceso completo                        |
+| Administrador2  | Mercer2    | Acceso completo                        |
+| Administrador3  | Mercer3    | Acceso completo                        |
 | Consulta1       | Consulta1  | Solo lectura y búsqueda                |
 
 ---
@@ -56,8 +56,15 @@ Para que todos vean los mismos cambios en tiempo real desde cualquier PC/celular
 
 ## Funcionalidades
 - **Dashboard:** totales, valor de inventario, contenedores, últimos ingresos, gráficos de stock por contenedor y compras por mes.
-- **Inventario:** buscar por nombre/código, filtrar por contenedor/mes/año, ordenar columnas, paginación configurable, +/- de stock inline.
+- **Inventario / Compras:** buscar por nombre/código, filtrar por contenedor/mes/año, ordenar columnas, paginación configurable, +/- de stock inline.
 - **Reportes:** valor total, stock por contenedor, por mes y top productos con gráficos.
+- **Ventas:** registrar venta (fecha, producto, modelo, color, medida, cantidad, precio unitario, importe total automático, cliente, vendedora, observaciones). Al guardar, **descuenta el stock automáticamente** del producto vendido. Lista de últimas 10 ventas con búsqueda, edición y borrado (solo admin).
+- **Dashboard de Ventas:** ventas del día/mes, productos vendidos, facturación total, ticket promedio, ranking de productos, ventas y participación por vendedora, evolución diaria.
 - **Alta / Edición / Eliminación** (con confirmación) para administradores.
 - **Exportar** a Excel, CSV y PDF. **Importar** desde Excel (actualiza por código).
+- **Sincronización en la nube (Supabase):** stock y ventas se guardan de forma permanente y se refrescan solos cada 8 segundos en todos los dispositivos conectados.
 - **Login** con 3 admins + 1 consulta. Responsive (PC, tablet, celular).
+
+### Nota sobre las nuevas tablas
+El archivo `supabase.sql` ahora crea **dos** tablas: `alfombras` (stock) y `ventas`.
+Si ya habías corrido el SQL antes, volvé a ejecutarlo: sólo agregará la tabla `ventas` que falta.
