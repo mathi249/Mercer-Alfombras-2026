@@ -248,7 +248,7 @@ function ProductForm({initial,onSave,onClose,containers}){
           <datalist id="conts">{containers.map(c=><option key={c} value={c}/>)}</datalist>
         </Field>
         <Field label="Cantidad en stock"><input type="number" className={inp} value={f.stock} onChange={e=>set('stock',e.target.value)}/></Field>
-        <Field label="Precio de compra"><input type="number" step="0.01" className={inp} value={f.precio_compra} onChange={e=>set('precio_compra',e.target.value)}/></Field>
+        <Field label="Costo de compra"><input type="number" step="0.01" className={inp} value={f.precio_compra} onChange={e=>set('precio_compra',e.target.value)}/></Field>
         <Field label="Moneda">
           <select className={inp} value={f.moneda} onChange={e=>set('moneda',e.target.value)}><option>USD</option><option>ARS</option></select>
         </Field>
@@ -278,9 +278,18 @@ function Dashboard({rows}){
 
   const byCont = {};
   rows.forEach(r=>{ byCont[r.contenedor||"(sin)"]=(byCont[r.contenedor||"(sin)"]||0)+(Number(r.stock)||0); });
-  const byMonth = {};
-  MESES.forEach(m=>byMonth[m]=0);
-  rows.forEach(r=>{ if(r.mes_compra) byMonth[r.mes_compra]=(byMonth[r.mes_compra]||0)+(Number(r.stock)||0); });
+  // Stock actual agrupado por período de compra (mes + año), ordenado cronológicamente
+  const byPeriodo = {};
+  rows.forEach(r=>{
+    if(!r.mes_compra) return;
+    const k=(r.mes_compra||"")+" "+(r.anio_compra||"");
+    byPeriodo[k]=(byPeriodo[k]||0)+(Number(r.stock)||0);
+  });
+  const periodos = Object.keys(byPeriodo).sort((a,b)=>{
+    const [ma,ya]=a.split(" "), [mb,yb]=b.split(" ");
+    if((ya||"")!==(yb||"")) return (ya||"").localeCompare(yb||"");
+    return MESES.indexOf(ma)-MESES.indexOf(mb);
+  });
 
   const palette=PALETTE;
 
@@ -301,10 +310,11 @@ function Dashboard({rows}){
           }} options={{plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}}/>
         </div>
         <div className="bg-white rounded-2xl p-5 border border-sand-200 shadow-sm">
-          <h3 className="font-serif text-xl text-ink mb-4">Compras por mes</h3>
+          <h3 className="font-serif text-xl text-ink mb-1">Stock por período de compra</h3>
+          <p className="text-xs text-sand-500 mb-3">Unidades disponibles hoy, según cuándo se compraron</p>
           <ChartBox type="bar" data={{
-            labels:MESES,
-            datasets:[{label:"Unidades",data:MESES.map(m=>byMonth[m]),backgroundColor:'#b5713b',borderRadius:6}]
+            labels:periodos,
+            datasets:[{label:"Unidades en stock",data:periodos.map(p=>byPeriodo[p]),backgroundColor:'#b5713b',borderRadius:6}]
           }} options={{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}}/>
         </div>
       </div>
@@ -331,12 +341,15 @@ function Table({rows,role,onEdit,onDelete,onStock}){
   const [fc,setFc]=useState(""); const [fm,setFm]=useState(""); const [fy,setFy]=useState("");
   const [sort,setSort]=useState({k:"codigo",dir:1});
   const [perPage,setPerPage]=useState(15); const [page,setPage]=useState(1);
+  const [verAgotados,setVerAgotados]=useState(false);
 
   const containers=[...new Set(rows.map(r=>r.contenedor).filter(Boolean))].sort();
   const anios=[...new Set(rows.map(r=>r.anio_compra).filter(Boolean))].sort();
+  const agotados=rows.filter(r=>(Number(r.stock)||0)<=0).length;
 
   const filtered=useMemo(()=>{
     let d=rows.filter(r=>
+      (verAgotados || (Number(r.stock)||0)>0) &&
       (!q || (r.nombre||"").toLowerCase().includes(q.toLowerCase())) &&
       (!qc || (r.codigo||"").toLowerCase().includes(qc.toLowerCase())) &&
       (!fc || r.contenedor===fc) &&
@@ -350,9 +363,9 @@ function Table({rows,role,onEdit,onDelete,onStock}){
       return x<y?-sort.dir:x>y?sort.dir:0;
     });
     return d;
-  },[rows,q,qc,fc,fm,fy,sort]);
+  },[rows,q,qc,fc,fm,fy,sort,verAgotados]);
 
-  useEffect(()=>{setPage(1);},[q,qc,fc,fm,fy,perPage]);
+  useEffect(()=>{setPage(1);},[q,qc,fc,fm,fy,perPage,verAgotados]);
   const pages=Math.max(1,Math.ceil(filtered.length/perPage));
   const view=filtered.slice((page-1)*perPage,page*perPage);
   const th=(k,label)=>(
@@ -371,6 +384,9 @@ function Table({rows,role,onEdit,onDelete,onStock}){
         <select className={inp} value={fm} onChange={e=>setFm(e.target.value)}><option value="">Mes</option>{MESES.map(m=><option key={m}>{m}</option>)}</select>
         <select className={inp} value={fy} onChange={e=>setFy(e.target.value)}><option value="">Año</option>{anios.map(a=><option key={a}>{a}</option>)}</select>
         <select className={inp} value={perPage} onChange={e=>setPerPage(Number(e.target.value))}>{[10,15,25,50,100].map(n=><option key={n} value={n}>{n}/pág</option>)}</select>
+        <button onClick={()=>setVerAgotados(v=>!v)} className={"px-3 py-2 rounded-lg border text-sm "+(verAgotados?"bg-ink text-white border-ink":"border-sand-300 bg-white text-sand-700 hover:bg-sand-100")} title="Mostrar u ocultar los productos sin stock">
+          {verAgotados?"Ocultar agotados":`Ver agotados (${agotados})`}
+        </button>
       </div>
       <div className="bg-white rounded-2xl border border-sand-200 shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
@@ -378,7 +394,7 @@ function Table({rows,role,onEdit,onDelete,onStock}){
             <tr>
               {th("codigo","Código")}{th("nombre","Nombre")}{th("color","Color")}{th("medidas","Medidas")}
               {th("contenedor","Contenedor")}{th("mes_compra","Mes")}{th("anio_compra","Año")}
-              {th("stock","Stock")}{th("precio_compra","Precio")}
+              {th("stock","Stock")}{th("precio_compra","Costo")}
               <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-sand-600">Acciones</th>
             </tr>
           </thead>
@@ -452,7 +468,7 @@ function Reports({rows}){
       </div>
       <div className="bg-white rounded-2xl p-5 border border-sand-200 shadow-sm">
         <h3 className="font-serif text-xl mb-4">Top productos por stock</h3>
-        <ChartBox type="bar" data={{labels:byProd.map(r=>r.nombre.slice(0,22)),datasets:[{data:byProd.map(r=>r.stock),backgroundColor:'#3d7068',borderRadius:6}]}} options={{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}}}}/>
+        <ChartBox type="bar" data={{labels:byProd.map(r=>((r.nombre||"").slice(0,20))+(r.medidas?" · "+r.medidas:"")),datasets:[{data:byProd.map(r=>r.stock),backgroundColor:'#3d7068',borderRadius:6}]}} options={{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}}}}/>
       </div>
     </div>
   );
@@ -461,35 +477,70 @@ function Reports({rows}){
 /* ============================================================
    MÓDULO VENTAS
    ============================================================ */
-const VENTA_EMPTY = { fecha:new Date().toISOString().slice(0,10), producto:"", modelo:"", color:"", medida:"", cantidad:1, precio_unitario:0, importe_total:0, cliente:"", vendedora:"", observaciones:"" };
+const VENTA_EMPTY = { fecha:new Date().toISOString().slice(0,10), producto:"", modelo:"", color:"", medida:"", cantidad:1, precio_unitario:0, importe_total:0, cliente:"", telefono:"", vendedora:"", estado:"Cobrada y entregada", condicion:"Minorista", facturacion:"Sin Factura", costo_unitario:0, canje:false, observaciones:"" };
+
+// Estados de la operación
+const ESTADOS_VENTA = ["Cobrada y entregada","Cobrada y falta entregar","Entregada y falta cobrar"];
+// Condiciones de venta. El descuento se aplica automáticamente sobre el precio unitario.
+const CONDICIONES = [
+  {label:"Minorista", desc:0},
+  {label:"Minorista 10%", desc:10},
+  {label:"Minorista 20%", desc:20},
+  {label:"Minorista 30%", desc:30},
+  {label:"Mayorista", desc:0},
+];
+const FACTURACION = ["Sin Factura","Factura A"];
+// Colores de referencia para el estado
+const ESTADO_COLOR = {
+  "Cobrada y entregada":"bg-emerald-100 text-emerald-800",
+  "Cobrada y falta entregar":"bg-amber-100 text-amber-800",
+  "Entregada y falta cobrar":"bg-red-100 text-red-800",
+};
+
+// Calcula importe, costo total y margen de una venta
+function calcVenta(f){
+  const cant  = Number(f.cantidad)||0;
+  const pu    = Number(f.precio_unitario)||0;
+  const desc  = (CONDICIONES.find(c=>c.label===f.condicion)||{desc:0}).desc;
+  const puNeto= pu*(1-desc/100);
+  const canje = !!f.canje;
+  const importe = canje ? 0 : cant*puNeto;          // en canje no hay ingreso de dinero
+  const costoU  = Number(f.costo_unitario)||0;
+  const costoT  = cant*costoU;
+  const margen  = importe-costoT;                    // ganancia en dinero
+  const margenPct = importe>0 ? (margen/importe)*100 : (canje ? -100 : 0);
+  return { cant, pu, desc, puNeto, canje, importe, costoU, costoT, margen, margenPct };
+}
 
 function VentaForm({initial,onSave,onClose,productos}){
   const [f,setF]=useState({...VENTA_EMPTY,...initial});
   const [err,setErr]=useState("");
-  const set=(k,v)=>setF(p=>{
-    const nx={...p,[k]:v};
-    if(k==="cantidad"||k==="precio_unitario"){
-      nx.importe_total = (Number(nx.cantidad)||0)*(Number(nx.precio_unitario)||0);
-    }
-    return nx;
-  });
-  // Autocompletar datos al elegir un producto existente
+  const set=(k,v)=>setF(p=>({...p,[k]:v}));
+  // Autocompletar datos al elegir un producto existente (incluye el costo)
   const pickProducto=(nombre)=>{
     const p=productos.find(x=>x.nombre===nombre);
     setF(prev=>{
       const nx={...prev, producto:nombre};
-      if(p){ nx.modelo=p.codigo||prev.modelo; nx.color=p.color||prev.color; nx.medida=p.medidas||prev.medida; }
+      if(p){
+        nx.modelo=p.codigo||prev.modelo;
+        nx.color=p.color||prev.color;
+        nx.medida=p.medidas||prev.medida;
+        nx.costo_unitario=Number(p.precio_compra)||0;
+      }
       return nx;
     });
   };
+  const c=calcVenta(f);
   const submit=()=>{
     if(!f.producto.trim()){ setErr("El producto es obligatorio."); return; }
     if((Number(f.cantidad)||0)<=0){ setErr("La cantidad debe ser mayor a 0."); return; }
     onSave({
       ...f,
-      cantidad:Number(f.cantidad)||0,
-      precio_unitario:Number(f.precio_unitario)||0,
-      importe_total:(Number(f.cantidad)||0)*(Number(f.precio_unitario)||0)
+      cantidad:c.cant,
+      precio_unitario:c.pu,
+      costo_unitario:c.costoU,
+      canje:!!f.canje,
+      importe_total:c.importe
     });
   };
   const inp=FieldInp;
@@ -506,17 +557,48 @@ function VentaForm({initial,onSave,onClose,productos}){
         <Field label="Color"><input className={inp} value={f.color} onChange={e=>set('color',e.target.value)}/></Field>
         <Field label="Medida"><input className={inp} value={f.medida} onChange={e=>set('medida',e.target.value)}/></Field>
         <Field label="Cantidad *"><input type="number" min="1" className={inp} value={f.cantidad} onChange={e=>set('cantidad',e.target.value)}/></Field>
-        <Field label="Precio unitario"><input type="number" step="0.01" className={inp} value={f.precio_unitario} onChange={e=>set('precio_unitario',e.target.value)}/></Field>
-        <Field label="Importe total">
-          <input className={inp+" bg-sand-100 font-semibold"} value={"US$ "+fmt((Number(f.cantidad)||0)*(Number(f.precio_unitario)||0))} readOnly/>
+
+        <Field label="Estado *">
+          <select className={inp} value={f.estado} onChange={e=>set('estado',e.target.value)}>
+            {ESTADOS_VENTA.map(s=><option key={s}>{s}</option>)}
+          </select>
         </Field>
+        <Field label="Condición de venta">
+          <select className={inp} value={f.condicion} onChange={e=>set('condicion',e.target.value)}>
+            {CONDICIONES.map(x=><option key={x.label}>{x.label}</option>)}
+          </select>
+        </Field>
+        <Field label="Facturación">
+          <select className={inp} value={f.facturacion} onChange={e=>set('facturacion',e.target.value)}>
+            {FACTURACION.map(x=><option key={x}>{x}</option>)}
+          </select>
+        </Field>
+        <Field label="Canje (sin cobro)">
+          <select className={inp} value={f.canje?"Sí":"No"} onChange={e=>set('canje',e.target.value==="Sí")}>
+            <option>No</option><option>Sí</option>
+          </select>
+        </Field>
+
+        <Field label="Precio unitario (de lista)"><input type="number" step="0.01" className={inp} value={f.precio_unitario} onChange={e=>set('precio_unitario',e.target.value)}/></Field>
+        <Field label="Costo unitario"><input type="number" step="0.01" className={inp} value={f.costo_unitario} onChange={e=>set('costo_unitario',e.target.value)}/></Field>
+
+        <Field label={"Importe total"+(c.desc?` (−${c.desc}%)`:"")}>
+          <input className={inp+" bg-sand-100 font-semibold"} value={c.canje?"CANJE · US$ 0":"US$ "+fmt(c.importe)} readOnly/>
+        </Field>
+        <Field label="Margen (venta − costo)">
+          <input className={inp+" font-semibold "+(c.margen>=0?"bg-emerald-50 text-emerald-800":"bg-red-50 text-red-700")}
+                 value={"US$ "+fmt(c.margen)+(c.importe>0?`  (${c.margenPct.toFixed(1)}%)`:"")} readOnly/>
+        </Field>
+
         <Field label="Cliente"><input className={inp} value={f.cliente} onChange={e=>set('cliente',e.target.value)}/></Field>
+        <Field label="Teléfono"><input className={inp} value={f.telefono} onChange={e=>set('telefono',e.target.value)} placeholder="11 5555-5555"/></Field>
         <Field label="Vendedora"><input className={inp} value={f.vendedora} onChange={e=>set('vendedora',e.target.value)}/></Field>
         <div className="sm:col-span-2">
           <label className="block text-xs font-semibold text-sand-700 mb-1">Observaciones</label>
           <textarea className={inp} rows="2" value={f.observaciones} onChange={e=>set('observaciones',e.target.value)}/>
         </div>
       </div>
+      {c.canje && <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-3">Canje: no se registra ingreso de dinero. El margen queda negativo por el costo de la mercadería entregada.</div>}
       {!initial && <div className="text-xs text-sand-500 mt-3">Al guardar se descontará automáticamente {f.cantidad||0} unidad(es) del stock del producto seleccionado.</div>}
       <div className="flex gap-3 mt-6 justify-end">
         <button onClick={onClose} className="px-5 py-2.5 rounded-xl border border-sand-300 text-sand-700 hover:bg-sand-100">Cancelar</button>
@@ -528,49 +610,69 @@ function VentaForm({initial,onSave,onClose,productos}){
 
 function VentasPanel({ventas,role,onNew,onEdit,onAnular}){
   const [q,setQ]=useState("");
+  const [fe,setFe]=useState("");
   const filtered=useMemo(()=>{
     const list=[...ventas].filter(v=>!v.anulada).sort((a,b)=>{
       const d=(b.fecha||"").localeCompare(a.fecha||"");
       return d!==0?d:(b.id||0)-(a.id||0);
     });
     const f=q.trim().toLowerCase();
-    const filt = !f ? list : list.filter(v=>
-      (v.producto||"").toLowerCase().includes(f) ||
-      (v.cliente||"").toLowerCase().includes(f) ||
-      (v.vendedora||"").toLowerCase().includes(f) ||
-      (v.modelo||"").toLowerCase().includes(f)
+    return list.filter(v=>
+      (!fe || v.estado===fe) &&
+      (!f ||
+        (v.producto||"").toLowerCase().includes(f) ||
+        (v.cliente||"").toLowerCase().includes(f) ||
+        (v.telefono||"").toLowerCase().includes(f) ||
+        (v.vendedora||"").toLowerCase().includes(f) ||
+        (v.modelo||"").toLowerCase().includes(f))
     );
-    return filt;
-  },[ventas,q]);
-  const view = q.trim() ? filtered : filtered.slice(0,10);
+  },[ventas,q,fe]);
+  const view = (q.trim()||fe) ? filtered : filtered.slice(0,10);
   return (
     <div className="fade">
       <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
-        <input className="px-3 py-2 rounded-lg border border-sand-300 bg-white outline-none focus:border-sand-500 text-sm flex-1 min-w-[180px]" placeholder="🔍 Buscar por producto, cliente o vendedora" value={q} onChange={e=>setQ(e.target.value)}/>
+        <input className="px-3 py-2 rounded-lg border border-sand-300 bg-white outline-none focus:border-sand-500 text-sm flex-1 min-w-[180px]" placeholder="🔍 Buscar por producto, cliente, teléfono o vendedora" value={q} onChange={e=>setQ(e.target.value)}/>
+        <select className="px-3 py-2 rounded-lg border border-sand-300 bg-white outline-none focus:border-sand-500 text-sm" value={fe} onChange={e=>setFe(e.target.value)}>
+          <option value="">Todos los estados</option>
+          {ESTADOS_VENTA.map(s=><option key={s}>{s}</option>)}
+        </select>
         {role==="admin" && <button onClick={onNew} className="px-4 py-2 rounded-xl bg-ink text-white text-sm font-semibold hover:bg-sand-900">+ Registrar venta</button>}
       </div>
-      <h3 className="font-serif text-xl text-ink mb-3">{q.trim()?`Resultados (${view.length})`:"Últimas 10 ventas"}</h3>
+      <h3 className="font-serif text-xl text-ink mb-3">{(q.trim()||fe)?`Resultados (${view.length})`:"Últimas 10 ventas"}</h3>
       <div className="bg-white rounded-2xl border border-sand-200 shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-sand-100 border-b border-sand-200">
             <tr>
-              {["Fecha","Producto","Modelo","Color","Medida","Cant.","P.Unit","Total","Cliente","Vendedora"].map(h=>
+              {["Fecha","Producto","Modelo","Medida","Cant.","Condición","Factura","P.Unit","Total","Costo","Margen","Estado","Cliente","Teléfono","Vendedora"].map(h=>
                 <th key={h} className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-sand-600 whitespace-nowrap">{h}</th>)}
               <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-sand-600">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {view.map(v=>(
+            {view.map(v=>{
+              const c=calcVenta(v);
+              return (
               <tr key={v.id} className="border-b border-sand-100 hover:bg-sand-50">
                 <td className="px-3 py-2 whitespace-nowrap">{v.fecha}</td>
                 <td className="px-3 py-2 text-ink">{v.producto}</td>
                 <td className="px-3 py-2 font-mono text-xs text-sand-600">{v.modelo}</td>
-                <td className="px-3 py-2">{v.color}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{v.medida}</td>
                 <td className="px-3 py-2 text-center">{v.cantidad}</td>
+                <td className="px-3 py-2 whitespace-nowrap text-xs">
+                  {v.canje ? <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 font-semibold">CANJE</span> : (v.condicion||"—")}
+                </td>
+                <td className="px-3 py-2 whitespace-nowrap text-xs">{v.facturacion||"—"}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{money(v.precio_unitario)}</td>
                 <td className="px-3 py-2 whitespace-nowrap font-semibold">{money(v.importe_total)}</td>
+                <td className="px-3 py-2 whitespace-nowrap text-sand-600">{money(c.costoT)}</td>
+                <td className={"px-3 py-2 whitespace-nowrap font-semibold "+(c.margen>=0?"text-emerald-700":"text-red-600")}>
+                  {money(c.margen)}{c.importe>0 && <span className="text-xs font-normal"> ({c.margenPct.toFixed(0)}%)</span>}
+                </td>
+                <td className="px-3 py-2 whitespace-nowrap">
+                  <span className={"px-2 py-0.5 rounded-full text-xs font-medium "+(ESTADO_COLOR[v.estado]||"bg-sand-100 text-sand-700")}>{v.estado||"—"}</span>
+                </td>
                 <td className="px-3 py-2">{v.cliente}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{v.telefono}</td>
                 <td className="px-3 py-2">{v.vendedora}</td>
                 <td className="px-3 py-2 text-right whitespace-nowrap">
                   {role==="admin" ? (
@@ -581,8 +683,9 @@ function VentasPanel({ventas,role,onNew,onEdit,onAnular}){
                   ) : <span className="text-sand-400 text-xs">solo lectura</span>}
                 </td>
               </tr>
-            ))}
-            {view.length===0 && <tr><td colSpan="11" className="text-center py-8 text-sand-500">Sin ventas registradas</td></tr>}
+              );
+            })}
+            {view.length===0 && <tr><td colSpan="16" className="text-center py-8 text-sand-500">Sin ventas registradas</td></tr>}
           </tbody>
         </table>
       </div>
@@ -664,6 +767,14 @@ function VentasDashboard({ventas:ventasRaw}){
   const productosVendidos=ventas.reduce((a,v)=>a+num(v,"cantidad"),0);
   const ticketPromedio=ventas.length? facturacionTotal/ventas.length : 0;
 
+  // Margen total y pendientes por estado
+  const margenTotal=ventas.reduce((a,v)=>a+calcVenta(v).margen,0);
+  const margenPct = facturacionTotal>0 ? (margenTotal/facturacionTotal)*100 : 0;
+  const faltaCobrar=ventas.filter(v=>v.estado==="Entregada y falta cobrar");
+  const faltaEntregar=ventas.filter(v=>v.estado==="Cobrada y falta entregar");
+  const montoFaltaCobrar=faltaCobrar.reduce((a,v)=>a+num(v,"importe_total"),0);
+  const canjes=ventas.filter(v=>v.canje);
+
   // Ranking productos
   const rank={};
   ventas.forEach(v=>{ const k=v.producto||"(sin)"; rank[k]=(rank[k]||0)+num(v,"cantidad"); });
@@ -691,6 +802,12 @@ function VentasDashboard({ventas:ventasRaw}){
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat icon="🎫" label="Ticket promedio" value={money(ticketPromedio)} sub="por venta"/>
         <Stat icon="🧾" label="Cantidad de ventas" value={fmt(ventas.length)} sub="operaciones"/>
+        <Stat icon="📈" label="Margen total" value={money(margenTotal)} sub={`${margenPct.toFixed(1)}% sobre facturación`}/>
+        <Stat icon="🤝" label="Canjes" value={fmt(canjes.length)} sub="entregas sin cobro"/>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Stat icon="⏳" label="Falta cobrar" value={money(montoFaltaCobrar)} sub={`${faltaCobrar.length} venta(s)`}/>
+        <Stat icon="🚚" label="Falta entregar" value={fmt(faltaEntregar.length)} sub="venta(s) pendientes"/>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -755,7 +872,7 @@ function exportPDFContext(tab,{rows,ventas}){
     doc.setFontSize(9); doc.text("Generado: "+fecha,14,21);
     doc.autoTable({
       startY:26, styles:{fontSize:7}, headStyles:{fillColor:[130,104,75]},
-      head:[["Código","Nombre","Color","Medidas","Cont.","Mes","Año","Stock","Precio","Mon."]],
+      head:[["Código","Nombre","Color","Medidas","Cont.","Mes","Año","Stock","Costo","Mon."]],
       body:rows.map(r=>[r.codigo,r.nombre,r.color,r.medidas,r.contenedor,r.mes_compra,r.anio_compra,r.stock,fmt(r.precio_compra),r.moneda])
     });
     doc.save("Mercer_Inventario.pdf"); return;
@@ -805,7 +922,7 @@ function exportPDFContext(tab,{rows,ventas}){
       head:[["Stock por mes de compra","Unidades"]], body:Object.entries(byM).map(([k,v])=>[k,fmt(v)]) });
     const topProd=[...rows].sort((a,b)=>num(b,"stock")-num(a,"stock")).slice(0,12);
     doc.autoTable({ styles:{fontSize:8}, headStyles:{fillColor:[130,104,75]},
-      head:[["Top productos por stock","Stock"]], body:topProd.map(r=>[r.nombre,fmt(r.stock)]) });
+      head:[["Top productos por stock","Medida","Stock"]], body:topProd.map(r=>[r.nombre,r.medidas||"",fmt(r.stock)]) });
     doc.save("Mercer_Reportes.pdf"); return;
   }
 
@@ -816,9 +933,12 @@ function exportPDFContext(tab,{rows,ventas}){
     doc.setFontSize(16); doc.text("MERCER · Ventas",14,15);
     doc.setFontSize(9); doc.text("Generado: "+fecha,14,21);
     doc.autoTable({
-      startY:26, styles:{fontSize:7}, headStyles:{fillColor:[130,104,75]},
-      head:[["Fecha","Producto","Modelo","Color","Medida","Cant.","P.Unit","Total","Cliente","Vendedora"]],
-      body:[...activas].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")).map(v=>[v.fecha,v.producto,v.modelo,v.color,v.medida,v.cantidad,fmt(v.precio_unitario),fmt(v.importe_total),v.cliente,v.vendedora])
+      startY:26, styles:{fontSize:6}, headStyles:{fillColor:[130,104,75]},
+      head:[["Fecha","Producto","Modelo","Medida","Cant.","Condición","Factura","P.Unit","Total","Costo","Margen","Estado","Cliente","Teléfono","Vendedora"]],
+      body:[...activas].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")).map(v=>{
+        const c=calcVenta(v);
+        return [v.fecha,v.producto,v.modelo,v.medida,v.cantidad,(v.canje?"CANJE":(v.condicion||"")),v.facturacion||"",fmt(v.precio_unitario),fmt(v.importe_total),fmt(c.costoT),fmt(c.margen),v.estado||"",v.cliente,v.telefono||"",v.vendedora];
+      })
     });
     doc.save("Mercer_Ventas.pdf"); return;
   }
