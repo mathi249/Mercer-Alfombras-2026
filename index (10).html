@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mercer · Gestión de Stock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { serif: ['Cormorant Garamond','serif'], sans: ['Inter','sans-serif'] },
+      colors: {
+        sand:   { 50:'#faf8f4',100:'#f3efe7',200:'#e8e0d2',300:'#d8cbb4',400:'#c3ae8e',500:'#b0976f',600:'#9c7f5a',700:'#82684b',800:'#6b5641',900:'#5a4938' },
+        ink:    '#2d2a26',
+      }
+    }
+  }
+}
+</script>
+<style>
+  body { background:#faf8f4; color:#2d2a26; }
+  .font-serif { letter-spacing:.5px; }
+  ::-webkit-scrollbar{height:8px;width:8px}
+  ::-webkit-scrollbar-thumb{background:#d8cbb4;border-radius:8px}
+  .fade{animation:f .25s ease}
+  @keyframes f{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-type="module">
+const { useState, useEffect, useMemo, useRef } = React;
+const ChartJS = window.Chart; // referencia a la librería antes de definir el componente
+
+/* ============================================================
+   CONFIGURACIÓN SUPABASE
+   Reemplazá estos valores por los de tu proyecto Supabase.
+   La app usa fetch directo a la REST API (patrón probado, sin supabase-js).
+   Si dejás SUPABASE_URL vacío, la app funciona en modo LOCAL (localStorage)
+   como respaldo, pero NO sincroniza entre dispositivos.
+   ============================================================ */
+let SUPABASE_URL  = "https://limncwbtbfyzdbeegwlu.supabase.co";
+const SUPABASE_KEY  = "sb_publishable_CZWZ89zbBGoRu5qZXsImtA_xAqqJ5x4";
+// Normaliza la URL: quita barra final y un /rest/v1 pegado de más, para evitar rutas dobles
+SUPABASE_URL = SUPABASE_URL.trim().replace(/\/+$/,"").replace(/\/rest\/v1$/,"");
+const TABLE  = "alfombras";
+const TABLE_V = "ventas";
+
+const CLOUD = !!(SUPABASE_URL && SUPABASE_KEY);
+const LS_STOCK = "mercer_stock";
+const LS_VENTAS = "mercer_ventas";
+
+/* ---------- Datos de prueba (149 alfombras reales del Excel Mercer) ---------- */
+const SEED = [{"codigo": "JUL-001", "nombre": "HALF MOON TOSTADO 2,50X3,50", "color": "Tostado", "medidas": "2.50x3.50", "mes_compra": "Julio", "anio_compra": "2026", "contenedor": "JUL 26 MIXTO", "stock": 10, "precio_compra": 190.31, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "JUL-002", "nombre": "HALF MOON TOSTADO CAMINO  0,80X2,50", "color": "Tostado", "medidas": "0.80x2.50", "mes_compra": "Julio", "anio_compra": "2026", "contenedor": "JUL 26 MIXTO", "stock": 10, "precio_compra": 43.5, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "JUL-003", "nombre": "HALF MOON BLACK 2,50X3,50", "color": "Black", "medidas": "2.50x3.50", "mes_compra": "Julio", "anio_compra": "2026", "contenedor": "JUL 26 MIXTO", "stock": 10, "precio_compra": 190.31, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "JUL-004", "nombre": "HALF MOON BLACK CAMINO 0,80X2,50", "color": "Black", "medidas": "0.80x2.50", "mes_compra": "Julio", "anio_compra": "2026", "contenedor": "JUL 26 MIXTO", "stock": 8, "precio_compra": 43.5, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "JUL-005", "nombre": "HALF MOON MOKA 2,50X3,50", "color": "Moka", "medidas": "2.50x3.50", "mes_compra": "Julio", "anio_compra": "2026", "contenedor": "JUL 26 MIXTO", "stock": 10, "precio_compra": 190.31, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "JUL-006", "nombre": "HALF MOON MOKA CAMINO 0,80X2,50", "color": "Moka", "medidas": "0.80x2.50", "mes_compra": "Julio", "anio_compra": "2026", "contenedor": "JUL 26 MIXTO", "stock": 10, "precio_compra": 43.5, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "JUL-007", "nombre": "LONDON 2X3", "color": "", "medidas": "2x3", "mes_compra": "Julio", "anio_compra": "2026", "contenedor": "JUL 26 MIXTO", "stock": 10, "precio_compra": 211.5, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "JUL-008", "nombre": "LONDON 3X4", "color": "", "medidas": "3x4", "mes_compra": "Julio", "anio_compra": "2026", "contenedor": "JUL 26 MIXTO", "stock": 10, "precio_compra": 423.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "JUL-009", "nombre": "CHEALSE BLACK 2X3", "color": "Black", "medidas": "2x3", "mes_compra": "Julio", "anio_compra": "2026", "contenedor": "JUL 26 MIXTO", "stock": 10, "precio_compra": 211.5, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "JUL-010", "nombre": "CHEALSE BLACK 3X4", "color": "Black", "medidas": "3x4", "mes_compra": "Julio", "anio_compra": "2026", "contenedor": "JUL 26 MIXTO", "stock": 10, "precio_compra": 423.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "JUL-011", "nombre": "CHEALSE CREAM 2X3", "color": "Cream", "medidas": "2x3", "mes_compra": "Julio", "anio_compra": "2026", "contenedor": "JUL 26 MIXTO", "stock": 10, "precio_compra": 211.5, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "JUL-012", "nombre": "CHEALSE CREAM 3X4", "color": "Cream", "medidas": "3x4", "mes_compra": "Julio", "anio_compra": "2026", "contenedor": "JUL 26 MIXTO", "stock": 10, "precio_compra": 423.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "JUL-013", "nombre": "CAMDEM 2X3", "color": "", "medidas": "2x3", "mes_compra": "Julio", "anio_compra": "2026", "contenedor": "JUL 26 MIXTO", "stock": 10, "precio_compra": 211.5, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "JUL-014", "nombre": "CAMDEM 3X4", "color": "", "medidas": "3x4", "mes_compra": "Julio", "anio_compra": "2026", "contenedor": "JUL 26 MIXTO", "stock": 10, "precio_compra": 423.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "JUL-015", "nombre": "RALPH 2X3", "color": "", "medidas": "2x3", "mes_compra": "Julio", "anio_compra": "2026", "contenedor": "JUL 26 MIXTO", "stock": 10, "precio_compra": 216.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "JUL-016", "nombre": "RALPH 3X4", "color": "", "medidas": "3x4", "mes_compra": "Julio", "anio_compra": "2026", "contenedor": "JUL 26 MIXTO", "stock": 10, "precio_compra": 432.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-001", "nombre": "AALBORG CDHP-24008 GOLDEN SAND 200X300", "color": "Golden", "medidas": "200x300", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 9, "precio_compra": 196.8, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-002", "nombre": "AALBORG CDHP-24008 GOLDEN SAND 250X350", "color": "Golden", "medidas": "250x350", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 6, "precio_compra": 287.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-003", "nombre": "AALBORG CDHP-24008 GOLDEN SAND 300X400", "color": "Golden", "medidas": "300x400", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 8, "precio_compra": 393.6, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-004", "nombre": "AALBORG CDHP-24008 GOLDEN SAND 90X300", "color": "Golden", "medidas": "90x300", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 6, "precio_compra": 88.56, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-005", "nombre": "AALBORG CDHP-24008 CHARCOAL GREY  200X300", "color": "Grey", "medidas": "200x300", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 6, "precio_compra": 196.8, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-006", "nombre": "AALBORG CDHP-24008 CHARCOAL GREY  250X350", "color": "Grey", "medidas": "250x350", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 9, "precio_compra": 287.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-007", "nombre": "AALBORG CDHP-24008 CHARCOAL GREY  300X400", "color": "Grey", "medidas": "300x400", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 8, "precio_compra": 393.6, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-008", "nombre": "AALBORG CDHP-24008 CHARCOAL GREY  90X300", "color": "Grey", "medidas": "90x300", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 6, "precio_compra": 88.56, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-009", "nombre": "ESTOCOLMO CDHP-24009  IVORY CREAM 200X300", "color": "Cream", "medidas": "200x300", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 10, "precio_compra": 196.8, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-010", "nombre": "ESTOCOLMO CDHP-24009  IVORY CREAM 250X350", "color": "Cream", "medidas": "250x350", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 8, "precio_compra": 287.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-011", "nombre": "ESTOCOLMO CDHP-24009  IVORY CREAM 300X400", "color": "Cream", "medidas": "300x400", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 11, "precio_compra": 393.6, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-012", "nombre": "MALMO CDHP-24010 WHITE  200X300", "color": "White", "medidas": "200x300", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 8, "precio_compra": 196.8, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-013", "nombre": "MALMO CDHP-24010 WHITE  250X350", "color": "White", "medidas": "250x350", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 2, "precio_compra": 287.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-014", "nombre": "MALMO CDHP-24010 WHITE 300X400", "color": "White", "medidas": "300x400", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 8, "precio_compra": 393.6, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-015", "nombre": "MALMO CDHP-24010  BLACK  200X300", "color": "Black", "medidas": "200x300", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 6, "precio_compra": 196.8, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-016", "nombre": "MALMO CDHP-24010 BLACK   250X350", "color": "Black", "medidas": "250x350", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 2, "precio_compra": 287.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-017", "nombre": "MALMO CDHP-24010 BLACK 300X400", "color": "Black", "medidas": "300x400", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 1, "precio_compra": 393.6, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-018", "nombre": "COPENHAGE CDHP-24011 200X300", "color": "", "medidas": "200x300", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 8, "precio_compra": 196.8, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-019", "nombre": "COPENHAGE CDHP-24011 250X350", "color": "", "medidas": "250x350", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 10, "precio_compra": 287.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-020", "nombre": "COPENHAGE CDHP-24011 300X400", "color": "", "medidas": "300x400", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 11, "precio_compra": 393.6, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-021", "nombre": "BERGEN CDHP-24278 IVORY CREAM 200X300", "color": "Cream", "medidas": "200x300", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 1, "precio_compra": 196.8, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-022", "nombre": "BERGEN CDHP-24278 IVORY CREAM 250X350", "color": "Cream", "medidas": "250x350", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 2, "precio_compra": 287.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-023", "nombre": "BERGEN CDHP-24278 IVORY CREAM 300X400", "color": "Cream", "medidas": "300x400", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 2, "precio_compra": 393.6, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-024", "nombre": "BERGEN CDHP-24278 IVORY CREAM 90X300", "color": "Cream", "medidas": "90x300", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 6, "precio_compra": 88.56, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-025", "nombre": "BERGEN CDHP-24278 CHARCOAL GREY  200X300", "color": "Grey", "medidas": "200x300", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 1, "precio_compra": 196.8, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-026", "nombre": "BERGEN CDHP-24278 CHARCOAL GREY  250X350", "color": "Grey", "medidas": "250x350", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 9, "precio_compra": 287.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-027", "nombre": "BERGEN CDHP-24278 CHARCOAL GREY  300X400", "color": "Grey", "medidas": "300x400", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 9, "precio_compra": 393.6, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-028", "nombre": "BERGEN CDHP-24278 CHARCOAL GREY  90X300", "color": "Grey", "medidas": "90x300", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 2, "precio_compra": 88.56, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-029", "nombre": "ODENSE CDHP-24301 BLACK 200X300", "color": "Black", "medidas": "200x300", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 4, "precio_compra": 196.8, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-030", "nombre": "ODENSE CDHP-24301 BLACK 250X350", "color": "Black", "medidas": "250x350", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 0, "precio_compra": 287.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-031", "nombre": "ODENSE CDHP-24301 BLACK 300X400", "color": "Black", "medidas": "300x400", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 11, "precio_compra": 393.6, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-032", "nombre": "DINAMARCA ROUND BLACK  CDHP-24224 150X150", "color": "Black", "medidas": "150x150", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 8, "precio_compra": 124.8, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-033", "nombre": "DINAMARCA ROUND BLACK  CDHP-24224 200X200", "color": "Black", "medidas": "200x200", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 7, "precio_compra": 166.4, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-034", "nombre": "DINAMARCA ROUND GOLD CDHP-24224 150X150", "color": "", "medidas": "150x150", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 8, "precio_compra": 124.8, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-035", "nombre": "DINAMARCA ROUND GOLD CDHP-24224 200X200", "color": "", "medidas": "200x200", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 9, "precio_compra": 166.4, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-036", "nombre": "HELSINKI 300X400", "color": "", "medidas": "300x400", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 3, "precio_compra": 393.6, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-037", "nombre": "HELSINKI 200X300", "color": "", "medidas": "200x300", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 7, "precio_compra": 196.8, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-038", "nombre": "KIRUNA 300X400", "color": "", "medidas": "300x400", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 6, "precio_compra": 393.6, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-039", "nombre": "KIRUNA 200X300", "color": "", "medidas": "200x300", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 5, "precio_compra": 196.8, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-040", "nombre": "MALMO WHITE  80X600 A MEDIDA PARA O FARHAT", "color": "White", "medidas": "80x600", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-041", "nombre": "MALMO WHITE  80X750 A MEDIDA PARA O FARHAT", "color": "White", "medidas": "80x750", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-042", "nombre": "MUESTRAS", "color": "", "medidas": "", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-043", "nombre": "MALMO BLACK 90X200", "color": "Black", "medidas": "90x200", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-044", "nombre": "KIRUNA 90X200", "color": "", "medidas": "90x200", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-045", "nombre": "HELSINKI 90X200", "color": "", "medidas": "90x200", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "MAR-046", "nombre": "TOTAL PACKING LIST", "color": "", "medidas": "", "mes_compra": "Marzo", "anio_compra": "2026", "contenedor": "MAR26 POLY", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-001", "nombre": "AALBORG CDHP-24008 200X300", "color": "", "medidas": "200x300", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 0, "precio_compra": 209.1, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-002", "nombre": "AALBORG CDHP-24008 250X350", "color": "", "medidas": "250x350", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 1, "precio_compra": 304.94, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-003", "nombre": "AALBORG CDHP-24008 300X400", "color": "", "medidas": "300x400", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 0, "precio_compra": 418.2, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-004", "nombre": "AALBORG CDHP-24008 90X300", "color": "", "medidas": "90x300", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 0, "precio_compra": 94.1, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-005", "nombre": "ESTOCOLMO CDHP-24009 200X300", "color": "", "medidas": "200x300", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 1, "precio_compra": 209.1, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-006", "nombre": "ESTOCOLMO CDHP-24009 250X350", "color": "", "medidas": "250x350", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 0, "precio_compra": 304.94, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-007", "nombre": "ESTOCOLMO CDHP-24009 300X400", "color": "", "medidas": "300x400", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 2, "precio_compra": 418.2, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-008", "nombre": "MALMO CDHP-24010 200X300", "color": "", "medidas": "200x300", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": -1, "precio_compra": 209.1, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-009", "nombre": "MALMO CDHP-24010 250X350", "color": "", "medidas": "250x350", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 0, "precio_compra": 304.94, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-010", "nombre": "MALMO CDHP-24010 300X400", "color": "", "medidas": "300x400", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 2, "precio_compra": 418.2, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-011", "nombre": "COPENHAGE CDHP-24011 200X300", "color": "", "medidas": "200x300", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 2, "precio_compra": 209.1, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-012", "nombre": "COPENHAGE CDHP-24011 250X350", "color": "", "medidas": "250x350", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 5, "precio_compra": 304.94, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-013", "nombre": "COPENHAGE CDHP-24011 300X400", "color": "", "medidas": "300x400", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 6, "precio_compra": 418.2, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-014", "nombre": "OSLO CDHP-24142 200X300", "color": "", "medidas": "200x300", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 0, "precio_compra": 209.1, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-015", "nombre": "OSLO CDHP-24142 250X350", "color": "", "medidas": "250x350", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 5, "precio_compra": 304.94, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-016", "nombre": "OSLO CDHP-24142 300X400", "color": "", "medidas": "300x400", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 2, "precio_compra": 418.2, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-017", "nombre": "BERGEN CDHP-24278 200X300", "color": "", "medidas": "200x300", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-018", "nombre": "BERGEN CDHP-24278 250X350", "color": "", "medidas": "250x350", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 0, "precio_compra": 304.94, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-019", "nombre": "BERGEN CDHP-24278 300X400", "color": "", "medidas": "300x400", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 0, "precio_compra": 418.2, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-020", "nombre": "BERGEN CDHP-24278 90X300", "color": "", "medidas": "90x300", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": -2, "precio_compra": 94.1, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-021", "nombre": "ODENSE CDHP-24301 200X300", "color": "", "medidas": "200x300", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 0, "precio_compra": 209.1, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-022", "nombre": "ODENSE CDHP-24301 250X350", "color": "", "medidas": "250x350", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 1, "precio_compra": 304.94, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-023", "nombre": "ODENSE CDHP-24301 300X400", "color": "", "medidas": "300x400", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 0, "precio_compra": 418.2, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-024", "nombre": "DINAMARCA BLACK CDHP-24303 200X300", "color": "Black", "medidas": "200x300", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 6, "precio_compra": 209.1, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-025", "nombre": "DINAMARCA BLACK CDHP-24303 250X350", "color": "Black", "medidas": "250x350", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 3, "precio_compra": 304.94, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-026", "nombre": "DINAMARCA BLACK CDHP-24303 300X400", "color": "Black", "medidas": "300x400", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 4, "precio_compra": 418.2, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-027", "nombre": "DINAMARCA GOLD CDHP-24303 200X300", "color": "", "medidas": "200x300", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 1, "precio_compra": 209.1, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-028", "nombre": "DINAMARCA GOLD CDHP-24303 250X350", "color": "", "medidas": "250x350", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 1, "precio_compra": 304.94, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-029", "nombre": "DINAMARCA GOLD CDHP-24303 300X400", "color": "", "medidas": "300x400", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 0, "precio_compra": 418.2, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-030", "nombre": "AMSTERDAM BISON HLTN 300x400", "color": "", "medidas": "300x400", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 9, "precio_compra": 632.4, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-031", "nombre": "BASEL can HLTN 300x400", "color": "", "medidas": "300x400", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 8, "precio_compra": 673.2, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-032", "nombre": "MUESTRAS", "color": "", "medidas": "", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-033", "nombre": "ALFOMBRAS DE FLOR (PAGADAS)", "color": "", "medidas": "", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-034", "nombre": "TOTAL QUE LLEGA", "color": "", "medidas": "", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": -1, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-035", "nombre": "QUEDARON DE LAS MUESTRAS PARA VENDER:", "color": "", "medidas": "", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "ABP-036", "nombre": "UNA ALBORG NEGRA CON RAYA BLANCA 2X3", "color": "", "medidas": "2x3", "mes_compra": "Abril", "anio_compra": "2025", "contenedor": "AB25 POLY", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "FEB-001", "nombre": "BOUCLE NATURAL MCF 4127 5X4", "color": "Natural", "medidas": "5x4", "mes_compra": "Febrero", "anio_compra": "2025", "contenedor": "FEB25 YUTE", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "FEB-002", "nombre": "BOUCLE NATURAL MCF 4127 3X4", "color": "Natural", "medidas": "3x4", "mes_compra": "Febrero", "anio_compra": "2025", "contenedor": "FEB25 YUTE", "stock": 0, "precio_compra": 178.2, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "FEB-003", "nombre": "BOUCLE NATURAL MCF 4127 2.50X3.50", "color": "Natural", "medidas": "2.50x3.50", "mes_compra": "Febrero", "anio_compra": "2025", "contenedor": "FEB25 YUTE", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "FEB-004", "nombre": "BOUCLE NATURAL MCF 4127 2X3", "color": "Natural", "medidas": "2x3", "mes_compra": "Febrero", "anio_compra": "2025", "contenedor": "FEB25 YUTE", "stock": 0, "precio_compra": 89.1, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "FEB-005", "nombre": "BOUCLE BLACK MCF 4127B 5X4", "color": "Black", "medidas": "5x4", "mes_compra": "Febrero", "anio_compra": "2025", "contenedor": "FEB25 YUTE", "stock": 9, "precio_compra": 481.8, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "FEB-006", "nombre": "BOUCLE BLACK MCF 4127B 3X4", "color": "Black", "medidas": "3x4", "mes_compra": "Febrero", "anio_compra": "2025", "contenedor": "FEB25 YUTE", "stock": 9, "precio_compra": 289.08, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "FEB-007", "nombre": "BOUCLE BLACK MCF 4127B 2.50X3.50", "color": "Black", "medidas": "2.50x3.50", "mes_compra": "Febrero", "anio_compra": "2025", "contenedor": "FEB25 YUTE", "stock": 0, "precio_compra": 210.79, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "FEB-008", "nombre": "BOUCLE BLACK MCF 4127B 2X3", "color": "Black", "medidas": "2x3", "mes_compra": "Febrero", "anio_compra": "2025", "contenedor": "FEB25 YUTE", "stock": 6, "precio_compra": 144.54, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "FEB-009", "nombre": "STRIPES BLACK MCF 4130 5X4", "color": "Black", "medidas": "5x4", "mes_compra": "Febrero", "anio_compra": "2025", "contenedor": "FEB25 YUTE", "stock": 10, "precio_compra": 409.2, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "FEB-010", "nombre": "STRIPES BLACK MCF 4130 3X4", "color": "Black", "medidas": "3x4", "mes_compra": "Febrero", "anio_compra": "2025", "contenedor": "FEB25 YUTE", "stock": 15, "precio_compra": 245.52, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "FEB-011", "nombre": "STRIPES BLACK MCF 4130 2.50X3.50", "color": "Black", "medidas": "2.50x3.50", "mes_compra": "Febrero", "anio_compra": "2025", "contenedor": "FEB25 YUTE", "stock": 9, "precio_compra": 179.03, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "FEB-012", "nombre": "STRIPES BLACK MCF 4130 2X3", "color": "Black", "medidas": "2x3", "mes_compra": "Febrero", "anio_compra": "2025", "contenedor": "FEB25 YUTE", "stock": 22, "precio_compra": 122.76, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "FEB-013", "nombre": "ALMOND DORADO MCF 14055 5X4", "color": "", "medidas": "5x4", "mes_compra": "Febrero", "anio_compra": "2025", "contenedor": "FEB25 YUTE", "stock": 9, "precio_compra": 413.6, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "FEB-014", "nombre": "ALMOND DORADO MCF 14055 3X4", "color": "", "medidas": "3x4", "mes_compra": "Febrero", "anio_compra": "2025", "contenedor": "FEB25 YUTE", "stock": 1, "precio_compra": 248.16, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "FEB-015", "nombre": "ALMOND DORADO MCF 14055 2.50x3.50", "color": "", "medidas": "2.50x3.50", "mes_compra": "Febrero", "anio_compra": "2025", "contenedor": "FEB25 YUTE", "stock": 0, "precio_compra": 180.95, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "FEB-016", "nombre": "ALMOND DORADO MCF 14055 2X3", "color": "", "medidas": "2x3", "mes_compra": "Febrero", "anio_compra": "2025", "contenedor": "FEB25 YUTE", "stock": 4, "precio_compra": 124.08, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "FEB-017", "nombre": "BRAIDED HALF MOON MCF 14035 2X3", "color": "", "medidas": "2x3", "mes_compra": "Febrero", "anio_compra": "2025", "contenedor": "FEB25 YUTE", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "FEB-018", "nombre": "PUNJA RUG MCF 14038 2X3", "color": "", "medidas": "2x3", "mes_compra": "Febrero", "anio_compra": "2025", "contenedor": "FEB25 YUTE", "stock": 0, "precio_compra": 192.98, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "NOV-001", "nombre": "BOUCLE NATURAL MCF 4127 5X4", "color": "Natural", "medidas": "5x4", "mes_compra": "Noviembre", "anio_compra": "2025", "contenedor": "NOV25 YUTE", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "NOV-002", "nombre": "BOUCLE NATURAL MCF 4127 3X4", "color": "Natural", "medidas": "3x4", "mes_compra": "Noviembre", "anio_compra": "2025", "contenedor": "NOV25 YUTE", "stock": 11, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "NOV-003", "nombre": "BOUCLE NATURAL MCF 4127 2.50X3.50", "color": "Natural", "medidas": "2.50x3.50", "mes_compra": "Noviembre", "anio_compra": "2025", "contenedor": "NOV25 YUTE", "stock": 25, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "NOV-004", "nombre": "BOUCLE NATURAL MCF 4127 2X3", "color": "Natural", "medidas": "2x3", "mes_compra": "Noviembre", "anio_compra": "2025", "contenedor": "NOV25 YUTE", "stock": 38, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-001", "nombre": "BOUCLE NATURAL MCF 4127 5X4", "color": "Natural", "medidas": "5x4", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-002", "nombre": "BOUCLE NATURAL MCF 4127 3X4", "color": "Natural", "medidas": "3x4", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-003", "nombre": "BOUCLE NATURAL MCF 4127 2.50X3.50", "color": "Natural", "medidas": "2.50x3.50", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-004", "nombre": "BOUCLE NATURAL MCF 4127 2X3", "color": "Natural", "medidas": "2x3", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-005", "nombre": "BOUCLE BLACK MCF 4127B 5X4", "color": "Black", "medidas": "5x4", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 4, "precio_compra": 537.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-006", "nombre": "BOUCLE BLACK MCF 4127B 3X4", "color": "Black", "medidas": "3x4", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 0, "precio_compra": 322.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-007", "nombre": "BOUCLE BLACK MCF 4127B 2.50X3.50", "color": "Black", "medidas": "2.50x3.50", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-008", "nombre": "BOUCLE BLACK MCF 4127B 2X3", "color": "Black", "medidas": "2x3", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-009", "nombre": "BOUCLE GREY MCF 4127G 5X4", "color": "Grey", "medidas": "5x4", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 3, "precio_compra": 537.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-010", "nombre": "BOUCLE GREY MCF 4127G 3X4", "color": "Grey", "medidas": "3x4", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 0, "precio_compra": 322.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-011", "nombre": "BOUCLE GREY MCF 4127G 2.50X3.50", "color": "Grey", "medidas": "2.50x3.50", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 1, "precio_compra": 235.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-012", "nombre": "BOUCLE GREY MCF 4127G 2X3", "color": "Grey", "medidas": "2x3", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 1, "precio_compra": 161.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-013", "nombre": "SPIKE MCF 4128 5X4", "color": "", "medidas": "5x4", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 2, "precio_compra": 945.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-014", "nombre": "SPIKE MCF 4128 3X4", "color": "", "medidas": "3x4", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 2, "precio_compra": 567.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-015", "nombre": "SPIKE MCF 4128 2.50X3.50", "color": "", "medidas": "2.50x3.50", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 0, "precio_compra": 413.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-016", "nombre": "SPIKE MCF 4128 2X3", "color": "", "medidas": "2x3", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 2, "precio_compra": 284.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-017", "nombre": "STRIPES BLACK MCF 4130 3X4", "color": "Black", "medidas": "3x4", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 3, "precio_compra": 502.0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-018", "nombre": "STRIPES BLACK MCF 4130 2.50X3.50", "color": "Black", "medidas": "2.50x3.50", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "AGO-019", "nombre": "STRIPES BLACK MCF 4130 2X3", "color": "Black", "medidas": "2x3", "mes_compra": "Agosto", "anio_compra": "2024", "contenedor": "AGO24", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "DIC-001", "nombre": "4122.0", "color": "", "medidas": "", "mes_compra": "Diciembre", "anio_compra": "2023", "contenedor": "DICIEMBRE 23", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "DIC-002", "nombre": "14055.0", "color": "", "medidas": "", "mes_compra": "Diciembre", "anio_compra": "2023", "contenedor": "DICIEMBRE 23", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "DIC-003", "nombre": "14039.0", "color": "", "medidas": "", "mes_compra": "Diciembre", "anio_compra": "2023", "contenedor": "DICIEMBRE 23", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "DIC-004", "nombre": "4122.0", "color": "", "medidas": "", "mes_compra": "Diciembre", "anio_compra": "2023", "contenedor": "DICIEMBRE 23", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "DIC-005", "nombre": "14055.0", "color": "", "medidas": "", "mes_compra": "Diciembre", "anio_compra": "2023", "contenedor": "DICIEMBRE 23", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "DIC-006", "nombre": "4122.0", "color": "", "medidas": "", "mes_compra": "Diciembre", "anio_compra": "2023", "contenedor": "DICIEMBRE 23", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "DIC-007", "nombre": "4127.0", "color": "", "medidas": "", "mes_compra": "Diciembre", "anio_compra": "2023", "contenedor": "DICIEMBRE 23", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "DIC-008", "nombre": "14039.0", "color": "", "medidas": "", "mes_compra": "Diciembre", "anio_compra": "2023", "contenedor": "DICIEMBRE 23", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "DIC-009", "nombre": "14039.0", "color": "", "medidas": "", "mes_compra": "Diciembre", "anio_compra": "2023", "contenedor": "DICIEMBRE 23", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}, {"codigo": "DIC-010", "nombre": "14055.0", "color": "", "medidas": "", "mes_compra": "Diciembre", "anio_compra": "2023", "contenedor": "DICIEMBRE 23", "stock": 0, "precio_compra": 0, "moneda": "USD", "proveedor": "Importado", "observaciones": ""}];
+
+/* ---------- Usuarios ---------- */
+const USERS = {
+  "Administrador1": { pass:"Mercer1", role:"admin" },
+  "Administrador2": { pass:"Mercer2", role:"admin" },
+  "Administrador3": { pass:"Mercer3", role:"admin" },
+  "Consulta1":      { pass:"Consulta1", role:"consulta" },
+};
+
+const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
+// Paleta de gráficos: tonos variados y bien diferenciables entre sí, acordes a la estética cálida de Mercer
+const PALETTE = ['#b5713b','#3d7068','#a03d3d','#c9a227','#5a6b8c','#7a9e5b','#8c5a8c','#5a4938','#c98a5a','#4a8a8a'];
+
+/* ============================================================
+   CAPA DE DATOS  (Supabase REST vía fetch directo)
+   ============================================================ */
+function lsKey(table){ return table===TABLE_V ? LS_VENTAS : LS_STOCK; }
+function readLS(table){ return JSON.parse(localStorage.getItem(lsKey(table))||"[]"); }
+function writeLS(table,d){ localStorage.setItem(lsKey(table), JSON.stringify(d)); }
+
+const api = {
+  headers(){
+    // Llaves nuevas (sb_publishable_ / sb_secret_) NO son JWT: van SOLO en el header apikey.
+    // Llaves clásicas (eyJ...) van en apikey y también en Authorization Bearer.
+    const nueva = /^sb_(publishable|secret)_/.test(SUPABASE_KEY);
+    const h = { "apikey":SUPABASE_KEY, "Content-Type":"application/json", "Prefer":"return=representation" };
+    if(!nueva) h["Authorization"]="Bearer "+SUPABASE_KEY;
+    return h;
+  },
+  async list(table=TABLE){
+    if(!CLOUD){
+      if(table===TABLE) return JSON.parse(localStorage.getItem(LS_STOCK)||"null") || seedLocal();
+      return readLS(table);
+    }
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*&order=id.asc`, { headers:this.headers() });
+    if(!r.ok){ const t=await r.text(); throw new Error("("+r.status+") "+t.slice(0,150)); }
+    return await r.json();
+  },
+  async create(row,table=TABLE){
+    if(!CLOUD){ const d=readLS(table); const nr={...row,id:Date.now()+Math.floor(Math.random()*1000)}; d.push(nr); writeLS(table,d); return nr; }
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method:"POST", headers:this.headers(), body:JSON.stringify(row) });
+    if(!r.ok){ const t=await r.text(); throw new Error("Error al crear ("+r.status+") "+t.slice(0,120)); }
+    return (await r.json())[0];
+  },
+  async createMany(rows,table=TABLE){
+    if(!rows||!rows.length) return [];
+    if(!CLOUD){ const d=readLS(table); rows.forEach(row=>d.push({...row,id:Date.now()+Math.floor(Math.random()*100000)})); writeLS(table,d); return d; }
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method:"POST", headers:this.headers(), body:JSON.stringify(rows) });
+    if(!r.ok){ const t=await r.text(); throw new Error("Error al cargar lote ("+r.status+") "+t.slice(0,150)); }
+    return await r.json();
+  },
+  async update(id,row,table=TABLE){
+    if(!CLOUD){ const d=readLS(table); const i=d.findIndex(x=>x.id===id); if(i>=0){d[i]={...d[i],...row}; writeLS(table,d); return d[i];} return null; }
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method:"PATCH", headers:this.headers(), body:JSON.stringify(row) });
+    if(!r.ok) throw new Error("Error al actualizar ("+r.status+")");
+    return (await r.json())[0];
+  },
+  async remove(id,table=TABLE){
+    if(!CLOUD){ const d=readLS(table).filter(x=>x.id!==id); writeLS(table,d); return; }
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method:"DELETE", headers:this.headers() });
+    if(!r.ok) throw new Error("Error al eliminar ("+r.status+")");
+  }
+};
+function readLocal(){ return readLS(TABLE); }
+function writeLocal(d){ writeLS(TABLE,d); }
+function seedLocal(){ const d = SEED.map((x,i)=>({...x,id:i+1})); writeLocal(d); return d; }
+
+/* ============================================================
+   UI helpers
+   ============================================================ */
+const fmt = (n)=> (n||0).toLocaleString("es-AR",{maximumFractionDigits:2});
+const money = (n,cur="USD")=> (cur==="USD"?"US$ ":"$ ")+fmt(n);
+
+function Toast({msg,type,onDone}){
+  useEffect(()=>{ const t=setTimeout(onDone,2600); return ()=>clearTimeout(t); },[]);
+  const c = type==="error" ? "bg-red-600" : type==="warn" ? "bg-amber-600" : "bg-emerald-700";
+  return <div className={`fixed top-5 right-5 z-50 ${c} text-white px-5 py-3 rounded-xl shadow-lg fade text-sm font-medium`}>{msg}</div>;
+}
+
+function Stat({label,value,sub,icon}){
+  return (
+    <div className="bg-white rounded-2xl p-5 border border-sand-200 shadow-sm">
+      <div className="flex items-center justify-between">
+        <span className="text-2xl">{icon}</span>
+        <span className="text-xs uppercase tracking-wider text-sand-600">{label}</span>
+      </div>
+      <div className="mt-3 text-3xl font-serif font-semibold text-ink">{value}</div>
+      {sub && <div className="text-xs text-sand-600 mt-1">{sub}</div>}
+    </div>
+  );
+}
+
+function ChartBox({type,data,options}){
+  const ref=useRef(); const inst=useRef();
+  useEffect(()=>{
+    if(inst.current) inst.current.destroy();
+    if(ref.current) inst.current = new ChartJS(ref.current, {type,data,options});
+    return ()=>{ if(inst.current) inst.current.destroy(); };
+  },[JSON.stringify(data),type]);
+  return <canvas ref={ref}></canvas>;
+}
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+function Login({onLogin}){
+  const [u,setU]=useState(""); const [p,setP]=useState(""); const [err,setErr]=useState("");
+  const go=()=>{
+    const acc=USERS[u.trim()];
+    if(acc && acc.pass===p){ onLogin({name:u.trim(),role:acc.role}); }
+    else setErr("Usuario o clave incorrectos.");
+  };
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-sand-100 to-sand-200">
+      <div className="bg-white rounded-3xl shadow-xl border border-sand-200 w-full max-w-sm p-8 fade">
+        <div className="text-center mb-8">
+          <div className="font-serif text-4xl font-bold tracking-widest text-ink">MERCER</div>
+          <div className="text-xs uppercase tracking-[0.3em] text-sand-500 mt-1">Gestión de Stock</div>
+        </div>
+        <label className="block text-xs font-semibold text-sand-700 mb-1">Usuario</label>
+        <input value={u} onChange={e=>setU(e.target.value)} onKeyDown={e=>e.key==='Enter'&&go()}
+          className="w-full mb-4 px-4 py-3 rounded-xl border border-sand-300 focus:border-sand-500 outline-none bg-sand-50" placeholder="Administrador1"/>
+        <label className="block text-xs font-semibold text-sand-700 mb-1">Clave</label>
+        <input type="password" value={p} onChange={e=>setP(e.target.value)} onKeyDown={e=>e.key==='Enter'&&go()}
+          className="w-full mb-2 px-4 py-3 rounded-xl border border-sand-300 focus:border-sand-500 outline-none bg-sand-50" placeholder="••••••"/>
+        {err && <div className="text-red-600 text-xs mb-2">{err}</div>}
+        <button onClick={go} className="w-full mt-4 bg-ink hover:bg-sand-900 text-white py-3 rounded-xl font-semibold transition">Ingresar</button>
+        <div className="text-[11px] text-sand-500 mt-6 text-center leading-relaxed">
+          {CLOUD ? "☁ Sincronización en la nube activa" : "⚠ Modo local — configurá Supabase para sincronizar"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   FORMULARIO (Alta / Edición)
+   ============================================================ */
+const EMPTY = { codigo:"",nombre:"",color:"",medidas:"",mes_compra:"",anio_compra:new Date().getFullYear().toString(),contenedor:"",stock:0,precio_compra:0,moneda:"USD",proveedor:"",observaciones:"" };
+
+function Modal({title,children,onClose,noBackdropClose}){
+  return (
+    <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4" onClick={noBackdropClose?undefined:onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto fade" onClick={e=>e.stopPropagation()}>
+        <div className="px-6 py-4 border-b border-sand-200 flex justify-between items-center sticky top-0 bg-white rounded-t-2xl">
+          <h3 className="font-serif text-2xl text-ink">{title}</h3>
+          <button onClick={onClose} className="text-sand-500 hover:text-ink text-2xl leading-none">×</button>
+        </div>
+        <div className="p-6">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+const FieldInp="w-full px-3 py-2 rounded-lg border border-sand-300 focus:border-sand-500 outline-none bg-sand-50 text-sm";
+function Field({label,children}){ return (<div><label className="block text-xs font-semibold text-sand-700 mb-1">{label}</label>{children}</div>); }
+
+function ProductForm({initial,onSave,onClose,containers}){
+  const [f,setF]=useState({...EMPTY,...initial});
+  const [err,setErr]=useState("");
+  const set=(k,v)=>setF(p=>({...p,[k]:v}));
+  const submit=()=>{
+    if(!f.codigo.trim()||!f.nombre.trim()){ setErr("Código y Nombre son obligatorios."); return; }
+    onSave({...f, stock:Number(f.stock)||0, precio_compra:Number(f.precio_compra)||0});
+  };
+  const inp=FieldInp;
+  return (
+    <Modal title={initial?"Editar alfombra":"Nueva alfombra"} onClose={onClose}>
+      {err && <div className="text-red-600 text-sm mb-3">{err}</div>}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Código *"><input className={inp} value={f.codigo} onChange={e=>set('codigo',e.target.value)}/></Field>
+        <Field label="Nombre *"><input className={inp} value={f.nombre} onChange={e=>set('nombre',e.target.value)}/></Field>
+        <Field label="Color"><input className={inp} value={f.color} onChange={e=>set('color',e.target.value)}/></Field>
+        <Field label="Medidas"><input className={inp} value={f.medidas} onChange={e=>set('medidas',e.target.value)} placeholder="2.00x3.00"/></Field>
+        <Field label="Mes de compra">
+          <select className={inp} value={f.mes_compra} onChange={e=>set('mes_compra',e.target.value)}>
+            <option value="">—</option>{MESES.map(m=><option key={m}>{m}</option>)}
+          </select>
+        </Field>
+        <Field label="Año de compra"><input className={inp} value={f.anio_compra} onChange={e=>set('anio_compra',e.target.value)}/></Field>
+        <Field label="Contenedor"><input className={inp} list="conts" value={f.contenedor} onChange={e=>set('contenedor',e.target.value)}/>
+          <datalist id="conts">{containers.map(c=><option key={c} value={c}/>)}</datalist>
+        </Field>
+        <Field label="Cantidad en stock"><input type="number" className={inp} value={f.stock} onChange={e=>set('stock',e.target.value)}/></Field>
+        <Field label="Precio de compra"><input type="number" step="0.01" className={inp} value={f.precio_compra} onChange={e=>set('precio_compra',e.target.value)}/></Field>
+        <Field label="Moneda">
+          <select className={inp} value={f.moneda} onChange={e=>set('moneda',e.target.value)}><option>USD</option><option>ARS</option></select>
+        </Field>
+        <Field label="Proveedor"><input className={inp} value={f.proveedor} onChange={e=>set('proveedor',e.target.value)}/></Field>
+        <div className="sm:col-span-2">
+          <label className="block text-xs font-semibold text-sand-700 mb-1">Observaciones</label>
+          <textarea className={inp} rows="2" value={f.observaciones} onChange={e=>set('observaciones',e.target.value)}/>
+        </div>
+      </div>
+      <div className="flex gap-3 mt-6 justify-end">
+        <button onClick={onClose} className="px-5 py-2.5 rounded-xl border border-sand-300 text-sand-700 hover:bg-sand-100">Cancelar</button>
+        <button onClick={submit} className="px-6 py-2.5 rounded-xl bg-ink text-white hover:bg-sand-900 font-semibold">Guardar</button>
+      </div>
+    </Modal>
+  );
+}
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+function Dashboard({rows:rowsAll}){
+  // Solo productos con stock disponible: los agotados no se muestran en el dashboard
+  const rows = rowsAll.filter(r=>(Number(r.stock)||0)>0);
+  const totalProd = rows.length;
+  const totalStock = rows.reduce((a,r)=>a+(Number(r.stock)||0),0);
+  const totalVal = rows.reduce((a,r)=>a+(Number(r.stock)||0)*(Number(r.precio_compra)||0),0);
+  const containers = [...new Set(rows.map(r=>r.contenedor).filter(Boolean))];
+  const ultimos = [...rows].slice(-5).reverse();
+
+  const byCont = {};
+  rows.forEach(r=>{ byCont[r.contenedor||"(sin)"]=(byCont[r.contenedor||"(sin)"]||0)+(Number(r.stock)||0); });
+  const byMonth = {};
+  MESES.forEach(m=>byMonth[m]=0);
+  rows.forEach(r=>{ if(r.mes_compra) byMonth[r.mes_compra]=(byMonth[r.mes_compra]||0)+(Number(r.stock)||0); });
+
+  const palette=PALETTE;
+
+  return (
+    <div className="fade">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Stat icon="📦" label="Productos" value={fmt(totalProd)} sub="tipos de alfombra"/>
+        <Stat icon="🧮" label="Stock total" value={fmt(totalStock)} sub="unidades"/>
+        <Stat icon="💰" label="Valor inventario" value={"US$ "+fmt(totalVal)} sub="a precio de compra"/>
+        <Stat icon="🚢" label="Contenedores" value={fmt(containers.length)} sub="orígenes"/>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="bg-white rounded-2xl p-5 border border-sand-200 shadow-sm">
+          <h3 className="font-serif text-xl text-ink mb-4">Stock por contenedor</h3>
+          <ChartBox type="doughnut" data={{
+            labels:Object.keys(byCont),
+            datasets:[{data:Object.values(byCont),backgroundColor:palette}]
+          }} options={{plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}}/>
+        </div>
+        <div className="bg-white rounded-2xl p-5 border border-sand-200 shadow-sm">
+          <h3 className="font-serif text-xl text-ink mb-4">Compras por mes</h3>
+          <ChartBox type="bar" data={{
+            labels:MESES,
+            datasets:[{label:"Unidades",data:MESES.map(m=>byMonth[m]),backgroundColor:'#b5713b',borderRadius:6}]
+          }} options={{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}}/>
+        </div>
+      </div>
+      <div className="bg-white rounded-2xl p-5 border border-sand-200 shadow-sm">
+        <h3 className="font-serif text-xl text-ink mb-4">Últimos ingresos</h3>
+        <div className="space-y-2">
+          {ultimos.map(r=>(
+            <div key={r.id} className="flex items-center justify-between py-2 border-b border-sand-100 last:border-0">
+              <div><span className="font-mono text-xs text-sand-500">{r.codigo}</span> · <span className="text-sm text-ink">{r.nombre}</span></div>
+              <div className="text-sm text-sand-600">{r.contenedor} · {r.stock} u.</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   TABLA
+   ============================================================ */
+function Table({rows,role,onEdit,onDelete,onStock}){
+  const [q,setQ]=useState(""); const [qc,setQc]=useState("");
+  const [fc,setFc]=useState(""); const [fm,setFm]=useState(""); const [fy,setFy]=useState("");
+  const [sort,setSort]=useState({k:"codigo",dir:1});
+  const [perPage,setPerPage]=useState(15); const [page,setPage]=useState(1);
+
+  const containers=[...new Set(rows.map(r=>r.contenedor).filter(Boolean))].sort();
+  const anios=[...new Set(rows.map(r=>r.anio_compra).filter(Boolean))].sort();
+
+  const filtered=useMemo(()=>{
+    let d=rows.filter(r=>
+      (!q || (r.nombre||"").toLowerCase().includes(q.toLowerCase())) &&
+      (!qc || (r.codigo||"").toLowerCase().includes(qc.toLowerCase())) &&
+      (!fc || r.contenedor===fc) &&
+      (!fm || r.mes_compra===fm) &&
+      (!fy || r.anio_compra===fy)
+    );
+    d=[...d].sort((a,b)=>{
+      let x=a[sort.k],y=b[sort.k];
+      if(sort.k==="stock"||sort.k==="precio_compra"){x=Number(x)||0;y=Number(y)||0;}
+      else {x=(x||"").toString().toLowerCase();y=(y||"").toString().toLowerCase();}
+      return x<y?-sort.dir:x>y?sort.dir:0;
+    });
+    return d;
+  },[rows,q,qc,fc,fm,fy,sort]);
+
+  useEffect(()=>{setPage(1);},[q,qc,fc,fm,fy,perPage]);
+  const pages=Math.max(1,Math.ceil(filtered.length/perPage));
+  const view=filtered.slice((page-1)*perPage,page*perPage);
+  const th=(k,label)=>(
+    <th onClick={()=>setSort(s=>({k,dir:s.k===k?-s.dir:1}))}
+      className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-sand-600 cursor-pointer hover:text-ink whitespace-nowrap select-none">
+      {label} {sort.k===k?(sort.dir===1?"▲":"▼"):""}
+    </th>
+  );
+  const inp="px-3 py-2 rounded-lg border border-sand-300 bg-white outline-none focus:border-sand-500 text-sm";
+  return (
+    <div className="fade">
+      <div className="flex flex-wrap gap-2 mb-4">
+        <input className={inp+" flex-1 min-w-[140px]"} placeholder="🔍 Buscar por nombre" value={q} onChange={e=>setQ(e.target.value)}/>
+        <input className={inp+" flex-1 min-w-[120px]"} placeholder="🔍 Código" value={qc} onChange={e=>setQc(e.target.value)}/>
+        <select className={inp} value={fc} onChange={e=>setFc(e.target.value)}><option value="">Contenedor</option>{containers.map(c=><option key={c}>{c}</option>)}</select>
+        <select className={inp} value={fm} onChange={e=>setFm(e.target.value)}><option value="">Mes</option>{MESES.map(m=><option key={m}>{m}</option>)}</select>
+        <select className={inp} value={fy} onChange={e=>setFy(e.target.value)}><option value="">Año</option>{anios.map(a=><option key={a}>{a}</option>)}</select>
+        <select className={inp} value={perPage} onChange={e=>setPerPage(Number(e.target.value))}>{[10,15,25,50,100].map(n=><option key={n} value={n}>{n}/pág</option>)}</select>
+      </div>
+      <div className="bg-white rounded-2xl border border-sand-200 shadow-sm overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-sand-100 border-b border-sand-200">
+            <tr>
+              {th("codigo","Código")}{th("nombre","Nombre")}{th("color","Color")}{th("medidas","Medidas")}
+              {th("contenedor","Contenedor")}{th("mes_compra","Mes")}{th("anio_compra","Año")}
+              {th("stock","Stock")}{th("precio_compra","Precio")}
+              <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-sand-600">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {view.map(r=>(
+              <tr key={r.id} className="border-b border-sand-100 hover:bg-sand-50">
+                <td className="px-3 py-2 font-mono text-xs text-sand-600">{r.codigo}</td>
+                <td className="px-3 py-2 text-ink">{r.nombre}</td>
+                <td className="px-3 py-2">{r.color}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{r.medidas}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{r.contenedor}</td>
+                <td className="px-3 py-2">{r.mes_compra}</td>
+                <td className="px-3 py-2">{r.anio_compra}</td>
+                <td className="px-3 py-2">
+                  {role==="admin" ? (
+                    <div className="flex items-center gap-1">
+                      <button onClick={()=>onStock(r,-1)} className="w-6 h-6 rounded bg-sand-200 hover:bg-sand-300 text-ink font-bold">−</button>
+                      <span className="w-8 text-center font-semibold">{r.stock}</span>
+                      <button onClick={()=>onStock(r,1)} className="w-6 h-6 rounded bg-sand-200 hover:bg-sand-300 text-ink font-bold">+</button>
+                    </div>
+                  ) : <span className="font-semibold">{r.stock}</span>}
+                </td>
+                <td className="px-3 py-2 whitespace-nowrap">{money(r.precio_compra,r.moneda)}</td>
+                <td className="px-3 py-2 text-right whitespace-nowrap">
+                  {role==="admin" ? (
+                    <>
+                      <button onClick={()=>onEdit(r)} className="text-sand-600 hover:text-ink px-1">✏️</button>
+                      <button onClick={()=>onDelete(r)} className="text-red-500 hover:text-red-700 px-1">🗑️</button>
+                    </>
+                  ) : <span className="text-sand-400 text-xs">solo lectura</span>}
+                </td>
+              </tr>
+            ))}
+            {view.length===0 && <tr><td colSpan="10" className="text-center py-8 text-sand-500">Sin resultados</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex items-center justify-between mt-4 text-sm text-sand-600">
+        <span>{filtered.length} registro(s)</span>
+        <div className="flex items-center gap-2">
+          <button disabled={page===1} onClick={()=>setPage(p=>p-1)} className="px-3 py-1.5 rounded-lg border border-sand-300 disabled:opacity-40 hover:bg-sand-100">‹</button>
+          <span>Página {page} de {pages}</span>
+          <button disabled={page===pages} onClick={()=>setPage(p=>p+1)} className="px-3 py-1.5 rounded-lg border border-sand-300 disabled:opacity-40 hover:bg-sand-100">›</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   REPORTES
+   ============================================================ */
+function Reports({rows:rowsAll}){
+  // Solo productos con stock disponible: los agotados no se muestran en reportes ni rankings
+  const rows = rowsAll.filter(r=>(Number(r.stock)||0)>0);
+  const totalVal = rows.reduce((a,r)=>a+(Number(r.stock)||0)*(Number(r.precio_compra)||0),0);
+  const agg=(key)=>{ const o={}; rows.forEach(r=>{const k=r[key]||"(sin)"; o[k]=(o[k]||0)+(Number(r.stock)||0);}); return o; };
+  const byCont=agg("contenedor"), byMonth=agg("mes_compra");
+  const byProd = [...rows].sort((a,b)=>(b.stock||0)-(a.stock||0)).slice(0,12);
+  const palette=PALETTE;
+  return (
+    <div className="fade space-y-6">
+      <Stat icon="💰" label="Valor total del inventario" value={"US$ "+fmt(totalVal)} sub="stock × precio de compra"/>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl p-5 border border-sand-200 shadow-sm">
+          <h3 className="font-serif text-xl mb-4">Stock por contenedor</h3>
+          <ChartBox type="bar" data={{labels:Object.keys(byCont),datasets:[{data:Object.values(byCont),backgroundColor:palette,borderRadius:6}]}} options={{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}}/>
+        </div>
+        <div className="bg-white rounded-2xl p-5 border border-sand-200 shadow-sm">
+          <h3 className="font-serif text-xl mb-4">Stock por mes de compra</h3>
+          <ChartBox type="line" data={{labels:MESES,datasets:[{label:"Unidades",data:MESES.map(m=>byMonth[m]||0),borderColor:'#a03d3d',backgroundColor:'rgba(160,61,61,.12)',fill:true,tension:.3}]}} options={{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}}/>
+        </div>
+      </div>
+      <div className="bg-white rounded-2xl p-5 border border-sand-200 shadow-sm">
+        <h3 className="font-serif text-xl mb-4">Top productos por stock</h3>
+        <ChartBox type="bar" data={{labels:byProd.map(r=>r.nombre.slice(0,22)),datasets:[{data:byProd.map(r=>r.stock),backgroundColor:'#3d7068',borderRadius:6}]}} options={{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}}}}/>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   MÓDULO VENTAS
+   ============================================================ */
+const VENTA_EMPTY = { fecha:new Date().toISOString().slice(0,10), producto:"", modelo:"", color:"", medida:"", cantidad:1, precio_unitario:0, importe_total:0, cliente:"", vendedora:"", observaciones:"" };
+
+function VentaForm({initial,onSave,onClose,productos}){
+  const [f,setF]=useState({...VENTA_EMPTY,...initial});
+  const [err,setErr]=useState("");
+  const set=(k,v)=>setF(p=>{
+    const nx={...p,[k]:v};
+    if(k==="cantidad"||k==="precio_unitario"){
+      nx.importe_total = (Number(nx.cantidad)||0)*(Number(nx.precio_unitario)||0);
+    }
+    return nx;
+  });
+  // Autocompletar datos al elegir un producto existente
+  const pickProducto=(nombre)=>{
+    const p=productos.find(x=>x.nombre===nombre);
+    setF(prev=>{
+      const nx={...prev, producto:nombre};
+      if(p){ nx.modelo=p.codigo||prev.modelo; nx.color=p.color||prev.color; nx.medida=p.medidas||prev.medida; }
+      return nx;
+    });
+  };
+  const submit=()=>{
+    if(!f.producto.trim()){ setErr("El producto es obligatorio."); return; }
+    if((Number(f.cantidad)||0)<=0){ setErr("La cantidad debe ser mayor a 0."); return; }
+    onSave({
+      ...f,
+      cantidad:Number(f.cantidad)||0,
+      precio_unitario:Number(f.precio_unitario)||0,
+      importe_total:(Number(f.cantidad)||0)*(Number(f.precio_unitario)||0)
+    });
+  };
+  const inp=FieldInp;
+  return (
+    <Modal title={initial?"Editar venta":"Registrar venta"} onClose={onClose} noBackdropClose={true}>
+      {err && <div className="text-red-600 text-sm mb-3">{err}</div>}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Fecha *"><input type="date" className={inp} value={f.fecha} onChange={e=>set('fecha',e.target.value)}/></Field>
+        <Field label="Producto *">
+          <input className={inp} list="prods" value={f.producto} onChange={e=>pickProducto(e.target.value)} placeholder="Nombre de la alfombra"/>
+          <datalist id="prods">{productos.map(p=><option key={p.id} value={p.nombre}/>)}</datalist>
+        </Field>
+        <Field label="Modelo / Código"><input className={inp} value={f.modelo} onChange={e=>set('modelo',e.target.value)}/></Field>
+        <Field label="Color"><input className={inp} value={f.color} onChange={e=>set('color',e.target.value)}/></Field>
+        <Field label="Medida"><input className={inp} value={f.medida} onChange={e=>set('medida',e.target.value)}/></Field>
+        <Field label="Cantidad *"><input type="number" min="1" className={inp} value={f.cantidad} onChange={e=>set('cantidad',e.target.value)}/></Field>
+        <Field label="Precio unitario"><input type="number" step="0.01" className={inp} value={f.precio_unitario} onChange={e=>set('precio_unitario',e.target.value)}/></Field>
+        <Field label="Importe total">
+          <input className={inp+" bg-sand-100 font-semibold"} value={"US$ "+fmt((Number(f.cantidad)||0)*(Number(f.precio_unitario)||0))} readOnly/>
+        </Field>
+        <Field label="Cliente"><input className={inp} value={f.cliente} onChange={e=>set('cliente',e.target.value)}/></Field>
+        <Field label="Vendedora"><input className={inp} value={f.vendedora} onChange={e=>set('vendedora',e.target.value)}/></Field>
+        <div className="sm:col-span-2">
+          <label className="block text-xs font-semibold text-sand-700 mb-1">Observaciones</label>
+          <textarea className={inp} rows="2" value={f.observaciones} onChange={e=>set('observaciones',e.target.value)}/>
+        </div>
+      </div>
+      {!initial && <div className="text-xs text-sand-500 mt-3">Al guardar se descontará automáticamente {f.cantidad||0} unidad(es) del stock del producto seleccionado.</div>}
+      <div className="flex gap-3 mt-6 justify-end">
+        <button onClick={onClose} className="px-5 py-2.5 rounded-xl border border-sand-300 text-sand-700 hover:bg-sand-100">Cancelar</button>
+        <button onClick={submit} className="px-6 py-2.5 rounded-xl bg-ink text-white hover:bg-sand-900 font-semibold">Guardar</button>
+      </div>
+    </Modal>
+  );
+}
+
+function VentasPanel({ventas,role,onNew,onEdit,onAnular}){
+  const [q,setQ]=useState("");
+  const filtered=useMemo(()=>{
+    const list=[...ventas].filter(v=>!v.anulada).sort((a,b)=>{
+      const d=(b.fecha||"").localeCompare(a.fecha||"");
+      return d!==0?d:(b.id||0)-(a.id||0);
+    });
+    const f=q.trim().toLowerCase();
+    const filt = !f ? list : list.filter(v=>
+      (v.producto||"").toLowerCase().includes(f) ||
+      (v.cliente||"").toLowerCase().includes(f) ||
+      (v.vendedora||"").toLowerCase().includes(f) ||
+      (v.modelo||"").toLowerCase().includes(f)
+    );
+    return filt;
+  },[ventas,q]);
+  const view = q.trim() ? filtered : filtered.slice(0,10);
+  return (
+    <div className="fade">
+      <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
+        <input className="px-3 py-2 rounded-lg border border-sand-300 bg-white outline-none focus:border-sand-500 text-sm flex-1 min-w-[180px]" placeholder="🔍 Buscar por producto, cliente o vendedora" value={q} onChange={e=>setQ(e.target.value)}/>
+        {role==="admin" && <button onClick={onNew} className="px-4 py-2 rounded-xl bg-ink text-white text-sm font-semibold hover:bg-sand-900">+ Registrar venta</button>}
+      </div>
+      <h3 className="font-serif text-xl text-ink mb-3">{q.trim()?`Resultados (${view.length})`:"Últimas 10 ventas"}</h3>
+      <div className="bg-white rounded-2xl border border-sand-200 shadow-sm overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-sand-100 border-b border-sand-200">
+            <tr>
+              {["Fecha","Producto","Modelo","Color","Medida","Cant.","P.Unit","Total","Cliente","Vendedora"].map(h=>
+                <th key={h} className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-sand-600 whitespace-nowrap">{h}</th>)}
+              <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-sand-600">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {view.map(v=>(
+              <tr key={v.id} className="border-b border-sand-100 hover:bg-sand-50">
+                <td className="px-3 py-2 whitespace-nowrap">{v.fecha}</td>
+                <td className="px-3 py-2 text-ink">{v.producto}</td>
+                <td className="px-3 py-2 font-mono text-xs text-sand-600">{v.modelo}</td>
+                <td className="px-3 py-2">{v.color}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{v.medida}</td>
+                <td className="px-3 py-2 text-center">{v.cantidad}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{money(v.precio_unitario)}</td>
+                <td className="px-3 py-2 whitespace-nowrap font-semibold">{money(v.importe_total)}</td>
+                <td className="px-3 py-2">{v.cliente}</td>
+                <td className="px-3 py-2">{v.vendedora}</td>
+                <td className="px-3 py-2 text-right whitespace-nowrap">
+                  {role==="admin" ? (
+                    <>
+                      <button onClick={()=>onEdit(v)} className="text-sand-600 hover:text-ink px-1" title="Editar">✏️</button>
+                      <button onClick={()=>onAnular(v)} className="text-red-500 hover:text-red-700 px-1" title="Anular venta">🚫</button>
+                    </>
+                  ) : <span className="text-sand-400 text-xs">solo lectura</span>}
+                </td>
+              </tr>
+            ))}
+            {view.length===0 && <tr><td colSpan="11" className="text-center py-8 text-sand-500">Sin ventas registradas</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function VentasAnuladasPanel({ventas,role,onRestaurar,onEliminar}){
+  const [q,setQ]=useState("");
+  const filtered=useMemo(()=>{
+    const list=[...ventas].filter(v=>v.anulada).sort((a,b)=>{
+      const d=(b.fecha_anulacion||b.fecha||"").localeCompare(a.fecha_anulacion||a.fecha||"");
+      return d!==0?d:(b.id||0)-(a.id||0);
+    });
+    const f=q.trim().toLowerCase();
+    return !f ? list : list.filter(v=>
+      (v.producto||"").toLowerCase().includes(f) ||
+      (v.cliente||"").toLowerCase().includes(f) ||
+      (v.vendedora||"").toLowerCase().includes(f) ||
+      (v.modelo||"").toLowerCase().includes(f)
+    );
+  },[ventas,q]);
+  return (
+    <div className="fade">
+      <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
+        <input className="px-3 py-2 rounded-lg border border-sand-300 bg-white outline-none focus:border-sand-500 text-sm flex-1 min-w-[180px]" placeholder="🔍 Buscar anuladas por producto, cliente o vendedora" value={q} onChange={e=>setQ(e.target.value)}/>
+      </div>
+      <h3 className="font-serif text-xl text-ink mb-3">Registro de ventas anuladas ({filtered.length})</h3>
+      <div className="bg-white rounded-2xl border border-sand-200 shadow-sm overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-sand-100 border-b border-sand-200">
+            <tr>
+              {["Fecha venta","Anulada el","Producto","Modelo","Cant.","Total","Cliente","Vendedora","Motivo"].map(h=>
+                <th key={h} className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-sand-600 whitespace-nowrap">{h}</th>)}
+              <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-sand-600">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(v=>(
+              <tr key={v.id} className="border-b border-sand-100 hover:bg-sand-50 bg-red-50/30">
+                <td className="px-3 py-2 whitespace-nowrap">{v.fecha}</td>
+                <td className="px-3 py-2 whitespace-nowrap text-sand-600">{v.fecha_anulacion||"—"}</td>
+                <td className="px-3 py-2 text-ink line-through decoration-red-400">{v.producto}</td>
+                <td className="px-3 py-2 font-mono text-xs text-sand-600">{v.modelo}</td>
+                <td className="px-3 py-2 text-center">{v.cantidad}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{money(v.importe_total)}</td>
+                <td className="px-3 py-2">{v.cliente}</td>
+                <td className="px-3 py-2">{v.vendedora}</td>
+                <td className="px-3 py-2 text-sand-600">{v.motivo_anulacion}</td>
+                <td className="px-3 py-2 text-right whitespace-nowrap">
+                  {role==="admin"
+                    ? <>
+                        <button onClick={()=>onRestaurar(v)} className="text-emerald-600 hover:text-emerald-800 px-1" title="Restaurar venta (vuelve a Ventas)">↩️</button>
+                        <button onClick={()=>onEliminar(v)} className="text-red-500 hover:text-red-700 px-1" title="Eliminar definitivamente (libera espacio)">🗑️</button>
+                      </>
+                    : <span className="text-sand-400 text-xs">solo lectura</span>}
+                </td>
+              </tr>
+            ))}
+            {filtered.length===0 && <tr><td colSpan="10" className="text-center py-8 text-sand-500">No hay ventas anuladas</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function VentasDashboard({ventas:ventasRaw}){
+  const ventas=ventasRaw.filter(v=>!v.anulada);
+  const hoy=new Date().toISOString().slice(0,10);
+  const mesActual=hoy.slice(0,7);
+  const ventasDia=ventas.filter(v=>v.fecha===hoy);
+  const ventasMes=ventas.filter(v=>(v.fecha||"").slice(0,7)===mesActual);
+  const num=(v,k)=>Number(v[k])||0;
+
+  const facturacionDia=ventasDia.reduce((a,v)=>a+num(v,"importe_total"),0);
+  const facturacionMes=ventasMes.reduce((a,v)=>a+num(v,"importe_total"),0);
+  const facturacionTotal=ventas.reduce((a,v)=>a+num(v,"importe_total"),0);
+  const productosVendidos=ventas.reduce((a,v)=>a+num(v,"cantidad"),0);
+  const ticketPromedio=ventas.length? facturacionTotal/ventas.length : 0;
+
+  // Ranking productos
+  const rank={};
+  ventas.forEach(v=>{ const k=v.producto||"(sin)"; rank[k]=(rank[k]||0)+num(v,"cantidad"); });
+  const ranking=Object.entries(rank).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  // Por vendedora
+  const porVend={};
+  ventas.forEach(v=>{ const k=v.vendedora||"(sin)"; porVend[k]=(porVend[k]||0)+num(v,"importe_total"); });
+  const vendLabels=Object.keys(porVend), vendVals=Object.values(porVend);
+  const totalVend=vendVals.reduce((a,b)=>a+b,0)||1;
+
+  // Evolución diaria (últimos 14 días)
+  const dias=[]; for(let i=13;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); dias.push(d.toISOString().slice(0,10)); }
+  const evol=dias.map(d=>ventas.filter(v=>v.fecha===d).reduce((a,v)=>a+num(v,"importe_total"),0));
+
+  const palette=PALETTE;
+  return (
+    <div className="fade space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Stat icon="📅" label="Ventas del día" value={money(facturacionDia)} sub={`${ventasDia.length} operación(es)`}/>
+        <Stat icon="🗓️" label="Ventas del mes" value={money(facturacionMes)} sub={`${ventasMes.length} operación(es)`}/>
+        <Stat icon="📦" label="Productos vendidos" value={fmt(productosVendidos)} sub="unidades totales"/>
+        <Stat icon="💵" label="Facturación total" value={money(facturacionTotal)} sub="histórico"/>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Stat icon="🎫" label="Ticket promedio" value={money(ticketPromedio)} sub="por venta"/>
+        <Stat icon="🧾" label="Cantidad de ventas" value={fmt(ventas.length)} sub="operaciones"/>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl p-5 border border-sand-200 shadow-sm">
+          <h3 className="font-serif text-xl mb-4">Ranking de productos más vendidos</h3>
+          <ChartBox type="bar" data={{
+            labels:ranking.map(r=>r[0].slice(0,24)),
+            datasets:[{data:ranking.map(r=>r[1]),backgroundColor:'#b5713b',borderRadius:6}]
+          }} options={{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}}}}/>
+        </div>
+        <div className="bg-white rounded-2xl p-5 border border-sand-200 shadow-sm">
+          <h3 className="font-serif text-xl mb-4">Ventas por vendedora</h3>
+          <ChartBox type="bar" data={{
+            labels:vendLabels,
+            datasets:[{label:"Facturación",data:vendVals,backgroundColor:palette,borderRadius:6}]
+          }} options={{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}}/>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl p-5 border border-sand-200 shadow-sm">
+          <h3 className="font-serif text-xl mb-4">Participación por vendedora</h3>
+          <ChartBox type="doughnut" data={{
+            labels:vendLabels.map((l,i)=>`${l} (${((vendVals[i]/totalVend)*100).toFixed(1)}%)`),
+            datasets:[{data:vendVals,backgroundColor:palette}]
+          }} options={{plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}}/>
+        </div>
+        <div className="bg-white rounded-2xl p-5 border border-sand-200 shadow-sm">
+          <h3 className="font-serif text-xl mb-4">Evolución diaria (14 días)</h3>
+          <ChartBox type="line" data={{
+            labels:dias.map(d=>d.slice(5)),
+            datasets:[{label:"Facturación",data:evol,borderColor:'#3d7068',backgroundColor:'rgba(61,112,104,.12)',fill:true,tension:.3}]
+          }} options={{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   EXPORT / IMPORT
+   ============================================================ */
+const COLS=["codigo","nombre","color","medidas","mes_compra","anio_compra","contenedor","stock","precio_compra","moneda","proveedor","observaciones"];
+function exportExcel(rows){
+  const ws=XLSX.utils.json_to_sheet(rows.map(r=>{const o={};COLS.forEach(c=>o[c]=r[c]);return o;}));
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Stock");
+  XLSX.writeFile(wb,"Mercer_Stock.xlsx");
+}
+// Helper: agrega tabla resumen agregando por una clave
+function aggBy(rows,key,valKey="stock"){ const o={}; rows.forEach(r=>{const k=r[key]||"(sin)"; o[k]=(o[k]||0)+(Number(r[valKey])||0);}); return o; }
+
+// PDF contextual: descarga lo que se está viendo en la pestaña actual
+function exportPDFContext(tab,{rows,ventas}){
+  const { jsPDF }=window.jspdf;
+  const fecha=new Date().toLocaleString("es-AR");
+  const num=(v,k)=>Number(v[k])||0;
+
+  // ---- INVENTARIO / COMPRAS: tabla de productos ----
+  if(tab==="table"||tab==="compras"){
+    const doc=new jsPDF({orientation:"landscape"});
+    doc.setFontSize(16); doc.text("MERCER · Inventario de Alfombras",14,15);
+    doc.setFontSize(9); doc.text("Generado: "+fecha,14,21);
+    doc.autoTable({
+      startY:26, styles:{fontSize:7}, headStyles:{fillColor:[130,104,75]},
+      head:[["Código","Nombre","Color","Medidas","Cont.","Mes","Año","Stock","Precio","Mon."]],
+      body:rows.map(r=>[r.codigo,r.nombre,r.color,r.medidas,r.contenedor,r.mes_compra,r.anio_compra,r.stock,fmt(r.precio_compra),r.moneda])
+    });
+    doc.save("Mercer_Inventario.pdf"); return;
+  }
+
+  // ---- DASHBOARD (stock): resumen con KPIs y agregados ----
+  if(tab==="dash"){
+    const doc=new jsPDF();
+    rows=rows.filter(r=>(Number(r.stock)||0)>0); // sin agotados, igual que en pantalla
+    const totalProd=rows.length;
+    const totalStock=rows.reduce((a,r)=>a+num(r,"stock"),0);
+    const totalVal=rows.reduce((a,r)=>a+num(r,"stock")*num(r,"precio_compra"),0);
+    const conts=[...new Set(rows.map(r=>r.contenedor).filter(Boolean))];
+    doc.setFontSize(16); doc.text("MERCER · Dashboard de Stock",14,15);
+    doc.setFontSize(9); doc.text("Generado: "+fecha,14,21);
+    doc.autoTable({ startY:26, styles:{fontSize:10}, headStyles:{fillColor:[130,104,75]},
+      head:[["Indicador","Valor"]],
+      body:[
+        ["Productos (tipos)",fmt(totalProd)],
+        ["Stock total (unidades)",fmt(totalStock)],
+        ["Valor del inventario","US$ "+fmt(totalVal)],
+        ["Contenedores",fmt(conts.length)],
+      ]});
+    const byC=aggBy(rows,"contenedor");
+    doc.autoTable({ styles:{fontSize:9}, headStyles:{fillColor:[130,104,75]},
+      head:[["Stock por contenedor","Unidades"]],
+      body:Object.entries(byC).map(([k,v])=>[k,fmt(v)]) });
+    const byM=aggBy(rows,"mes_compra");
+    doc.autoTable({ styles:{fontSize:9}, headStyles:{fillColor:[130,104,75]},
+      head:[["Compras por mes","Unidades"]],
+      body:Object.entries(byM).map(([k,v])=>[k,fmt(v)]) });
+    doc.save("Mercer_Dashboard.pdf"); return;
+  }
+
+  // ---- REPORTES ----
+  if(tab==="reports"){
+    const doc=new jsPDF();
+    rows=rows.filter(r=>(Number(r.stock)||0)>0); // sin agotados, igual que en pantalla
+    const totalVal=rows.reduce((a,r)=>a+num(r,"stock")*num(r,"precio_compra"),0);
+    doc.setFontSize(16); doc.text("MERCER · Reportes",14,15);
+    doc.setFontSize(9); doc.text("Generado: "+fecha,14,21);
+    doc.autoTable({ startY:26, styles:{fontSize:10}, headStyles:{fillColor:[130,104,75]},
+      head:[["Indicador","Valor"]], body:[["Valor total del inventario","US$ "+fmt(totalVal)]] });
+    const byC=aggBy(rows,"contenedor");
+    doc.autoTable({ styles:{fontSize:9}, headStyles:{fillColor:[130,104,75]},
+      head:[["Stock por contenedor","Unidades"]], body:Object.entries(byC).map(([k,v])=>[k,fmt(v)]) });
+    const byM=aggBy(rows,"mes_compra");
+    doc.autoTable({ styles:{fontSize:9}, headStyles:{fillColor:[130,104,75]},
+      head:[["Stock por mes de compra","Unidades"]], body:Object.entries(byM).map(([k,v])=>[k,fmt(v)]) });
+    const topProd=[...rows].sort((a,b)=>num(b,"stock")-num(a,"stock")).slice(0,12);
+    doc.autoTable({ styles:{fontSize:8}, headStyles:{fillColor:[130,104,75]},
+      head:[["Top productos por stock","Stock"]], body:topProd.map(r=>[r.nombre,fmt(r.stock)]) });
+    doc.save("Mercer_Reportes.pdf"); return;
+  }
+
+  // ---- VENTAS: tabla de ventas ----
+  if(tab==="ventas"){
+    const doc=new jsPDF({orientation:"landscape"});
+    const activas=ventas.filter(v=>!v.anulada);
+    doc.setFontSize(16); doc.text("MERCER · Ventas",14,15);
+    doc.setFontSize(9); doc.text("Generado: "+fecha,14,21);
+    doc.autoTable({
+      startY:26, styles:{fontSize:7}, headStyles:{fillColor:[130,104,75]},
+      head:[["Fecha","Producto","Modelo","Color","Medida","Cant.","P.Unit","Total","Cliente","Vendedora"]],
+      body:[...activas].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")).map(v=>[v.fecha,v.producto,v.modelo,v.color,v.medida,v.cantidad,fmt(v.precio_unitario),fmt(v.importe_total),v.cliente,v.vendedora])
+    });
+    doc.save("Mercer_Ventas.pdf"); return;
+  }
+
+  // ---- VENTAS ANULADAS ----
+  if(tab==="anuladas"){
+    const doc=new jsPDF({orientation:"landscape"});
+    const anul=ventas.filter(v=>v.anulada);
+    doc.setFontSize(16); doc.text("MERCER · Ventas Anuladas",14,15);
+    doc.setFontSize(9); doc.text("Generado: "+fecha,14,21);
+    doc.autoTable({
+      startY:26, styles:{fontSize:7}, headStyles:{fillColor:[176,60,60]},
+      head:[["Fecha","Producto","Modelo","Cant.","Total","Cliente","Vendedora","Motivo anulación"]],
+      body:[...anul].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")).map(v=>[v.fecha,v.producto,v.modelo,v.cantidad,fmt(v.importe_total),v.cliente,v.vendedora,v.motivo_anulacion||""])
+    });
+    doc.save("Mercer_Ventas_Anuladas.pdf"); return;
+  }
+
+  // ---- DASHBOARD VENTAS: resumen ----
+  if(tab==="ventasdash"){
+    const doc=new jsPDF();
+    const act=ventas.filter(v=>!v.anulada);
+    const hoy=new Date().toISOString().slice(0,10), mes=hoy.slice(0,7);
+    const fDia=act.filter(v=>v.fecha===hoy).reduce((a,v)=>a+num(v,"importe_total"),0);
+    const fMes=act.filter(v=>(v.fecha||"").slice(0,7)===mes).reduce((a,v)=>a+num(v,"importe_total"),0);
+    const fTot=act.reduce((a,v)=>a+num(v,"importe_total"),0);
+    const uds=act.reduce((a,v)=>a+num(v,"cantidad"),0);
+    const ticket=act.length?fTot/act.length:0;
+    doc.setFontSize(16); doc.text("MERCER · Dashboard de Ventas",14,15);
+    doc.setFontSize(9); doc.text("Generado: "+fecha,14,21);
+    doc.autoTable({ startY:26, styles:{fontSize:10}, headStyles:{fillColor:[130,104,75]},
+      head:[["Indicador","Valor"]],
+      body:[
+        ["Ventas del día","US$ "+fmt(fDia)],
+        ["Ventas del mes","US$ "+fmt(fMes)],
+        ["Facturación total","US$ "+fmt(fTot)],
+        ["Productos vendidos",fmt(uds)],
+        ["Cantidad de ventas",fmt(act.length)],
+        ["Ticket promedio","US$ "+fmt(ticket)],
+      ]});
+    const rank={}; act.forEach(v=>{const k=v.producto||"(sin)"; rank[k]=(rank[k]||0)+num(v,"cantidad");});
+    doc.autoTable({ styles:{fontSize:9}, headStyles:{fillColor:[130,104,75]},
+      head:[["Ranking de productos","Unidades"]],
+      body:Object.entries(rank).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([k,v])=>[k,fmt(v)]) });
+    const porV={}; act.forEach(v=>{const k=v.vendedora||"(sin)"; porV[k]=(porV[k]||0)+num(v,"importe_total");});
+    doc.autoTable({ styles:{fontSize:9}, headStyles:{fillColor:[130,104,75]},
+      head:[["Ventas por vendedora","Facturación US$"]],
+      body:Object.entries(porV).map(([k,v])=>[k,fmt(v)]) });
+    doc.save("Mercer_Dashboard_Ventas.pdf"); return;
+  }
+
+  // Fallback
+  exportPDFContext("table",{rows,ventas});
+}
+
+/* ============================================================
+   APP
+   ============================================================ */
+function App(){
+  const [user,setUser]=useState(null);
+  const [rows,setRows]=useState([]);
+  const [tab,setTab]=useState("dash");
+  const [loading,setLoading]=useState(true);
+  const [toast,setToast]=useState(null);
+  const [editing,setEditing]=useState(null);
+  const [showForm,setShowForm]=useState(false);
+  const [confirm,setConfirm]=useState(null);
+  const [ventas,setVentas]=useState([]);
+  const [showVentaForm,setShowVentaForm]=useState(false);
+  const [editingVenta,setEditingVenta]=useState(null);
+  const [confirmVenta,setConfirmVenta]=useState(null);
+  const [motivoAnul,setMotivoAnul]=useState("");
+  const [reintegrar,setReintegrar]=useState(true);
+  const [confirmDelVenta,setConfirmDelVenta]=useState(null);
+  const fileRef=useRef();
+  const notify=(msg,type="ok")=>setToast({msg,type});
+
+  const load=async()=>{
+    setLoading(true);
+    try{
+      let data=await api.list(TABLE);
+      if(CLOUD && (!data || data.length===0)){
+        // primera vez en la nube: sembrar stock en un solo request (lote)
+        notify("Cargando stock inicial de Mercer en la nube…");
+        await api.createMany(SEED,TABLE);
+        data=await api.list(TABLE);
+      }
+      setRows(data||[]);
+      const v=await api.list(TABLE_V);
+      setVentas(v||[]);
+      if(CLOUD && data && data.length) notify(`Conectado a la nube · ${data.length} productos`);
+    }catch(e){ notify("No se pudo leer la nube: "+e.message,"error"); }
+    setLoading(false);
+  };
+  useEffect(()=>{ if(user) load(); },[user]);
+
+  // Resembrado manual: sube las 149 alfombras del archivo Mercer si faltan (no duplica las que ya existen por código)
+  // Sincronización tiempo real: polling cada 8s en modo nube (stock + ventas)
+  useEffect(()=>{
+    if(!user || !CLOUD) return;
+    const t=setInterval(async()=>{
+      try{
+        const [d,v]=await Promise.all([api.list(TABLE),api.list(TABLE_V)]);
+        setRows(d||[]); setVentas(v||[]);
+      }catch(e){}
+    },8000);
+    return ()=>clearInterval(t);
+  },[user]);
+
+  const containers=[...new Set(rows.map(r=>r.contenedor).filter(Boolean))].sort();
+
+  const save=async(f)=>{
+    try{
+      if(editing){ const u=await api.update(editing.id,f,TABLE); setRows(rs=>rs.map(r=>r.id===editing.id?u:r)); notify("Alfombra actualizada"); }
+      else { const n=await api.create(f,TABLE); setRows(rs=>[...rs,n]); notify("Alfombra agregada"); }
+      setShowForm(false); setEditing(null);
+    }catch(e){ notify(e.message,"error"); }
+  };
+  const changeStock=async(r,delta)=>{
+    const ns=Math.max(0,(Number(r.stock)||0)+delta);
+    try{ const u=await api.update(r.id,{stock:ns},TABLE); setRows(rs=>rs.map(x=>x.id===r.id?u:x)); }
+    catch(e){ notify(e.message,"error"); }
+  };
+  const doDelete=async()=>{
+    try{ await api.remove(confirm.id,TABLE); setRows(rs=>rs.filter(r=>r.id!==confirm.id)); notify("Alfombra eliminada","warn"); }
+    catch(e){ notify(e.message,"error"); }
+    setConfirm(null);
+  };
+
+  // ---- VENTAS ----
+  const saveVenta=async(f)=>{
+    try{
+      if(editingVenta){
+        const u=await api.update(editingVenta.id,f,TABLE_V);
+        setVentas(vs=>vs.map(v=>v.id===editingVenta.id?u:v));
+        notify("Venta actualizada");
+      } else {
+        const n=await api.create(f,TABLE_V);
+        setVentas(vs=>[...vs,n]);
+        // Descontar stock automáticamente del producto (match por nombre; fallback por código/modelo)
+        const prod = rows.find(r=>r.nombre===f.producto) || rows.find(r=>r.codigo===f.modelo);
+        if(prod){
+          const ns=Math.max(0,(Number(prod.stock)||0)-(Number(f.cantidad)||0));
+          const up=await api.update(prod.id,{stock:ns},TABLE);
+          setRows(rs=>rs.map(r=>r.id===prod.id?up:r));
+          notify(`Venta registrada · stock de "${prod.nombre}" ahora: ${ns}`);
+        } else {
+          notify("Venta registrada (producto no encontrado en stock)","warn");
+        }
+      }
+      setShowVentaForm(false); setEditingVenta(null);
+    }catch(e){ notify(e.message,"error"); }
+  };
+  const doAnularVenta=async()=>{
+    try{
+      const v=confirmVenta;
+      const patch={ anulada:true, fecha_anulacion:new Date().toISOString().slice(0,10), motivo_anulacion:(motivoAnul||"").trim(), stock_reintegrado:reintegrar };
+      const u=await api.update(v.id,patch,TABLE_V);
+      setVentas(vs=>vs.map(x=>x.id===v.id?u:x));
+      if(reintegrar){
+        // Reintegrar stock al producto (match por nombre; fallback por código/modelo)
+        const prod = rows.find(r=>r.nombre===v.producto) || rows.find(r=>r.codigo===v.modelo);
+        if(prod){
+          const ns=(Number(prod.stock)||0)+(Number(v.cantidad)||0);
+          const up=await api.update(prod.id,{stock:ns},TABLE);
+          setRows(rs=>rs.map(r=>r.id===prod.id?up:r));
+          notify(`Venta anulada · stock de "${prod.nombre}" reintegrado a ${ns}`,"warn");
+        } else {
+          notify("Venta anulada (producto no encontrado en stock)","warn");
+        }
+      } else {
+        notify("Venta anulada · stock NO reintegrado","warn");
+      }
+    }catch(e){ notify(e.message,"error"); }
+    setConfirmVenta(null); setMotivoAnul(""); setReintegrar(true);
+  };
+  const restaurarVenta=async(v)=>{
+    try{
+      const u=await api.update(v.id,{anulada:false,fecha_anulacion:null,motivo_anulacion:null},TABLE_V);
+      setVentas(vs=>vs.map(x=>x.id===v.id?u:x));
+      // Al restaurar, solo se descuenta stock si al anular se había reintegrado (para no descontar dos veces)
+      if(v.stock_reintegrado!==false){
+        const prod = rows.find(r=>r.nombre===v.producto) || rows.find(r=>r.codigo===v.modelo);
+        if(prod){
+          const ns=Math.max(0,(Number(prod.stock)||0)-(Number(v.cantidad)||0));
+          const up=await api.update(prod.id,{stock:ns},TABLE);
+          setRows(rs=>rs.map(r=>r.id===prod.id?up:r));
+          notify(`Venta restaurada · stock de "${prod.nombre}" ahora: ${ns}`);
+        } else {
+          notify("Venta restaurada (producto no encontrado en stock)","warn");
+        }
+      } else {
+        notify("Venta restaurada · stock sin cambios (no se había reintegrado al anular)");
+      }
+    }catch(e){ notify(e.message,"error"); }
+  };
+  const doDeleteVentaDef=async()=>{
+    try{
+      await api.remove(confirmDelVenta.id,TABLE_V);
+      setVentas(vs=>vs.filter(x=>x.id!==confirmDelVenta.id));
+      notify("Venta eliminada definitivamente","warn");
+    }catch(e){ notify(e.message,"error"); }
+    setConfirmDelVenta(null);
+  };
+  const importExcel=(e)=>{
+    const file=e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=async(ev)=>{
+      try{
+        const wb=XLSX.read(ev.target.result,{type:"binary"});
+        const sheet=wb.Sheets[wb.SheetNames[0]];
+        const data=XLSX.utils.sheet_to_json(sheet);
+        let n=0;
+        for(const row of data){
+          const rec={}; COLS.forEach(c=>{ if(row[c]!==undefined) rec[c]=row[c]; });
+          if(!rec.codigo) continue;
+          rec.stock=Number(rec.stock)||0; rec.precio_compra=Number(rec.precio_compra)||0;
+          const existing=rows.find(r=>r.codigo===rec.codigo);
+          if(existing){ await api.update(existing.id,rec,TABLE); } else { await api.create(rec,TABLE); }
+          n++;
+        }
+        await load(); notify(`Importadas ${n} filas`);
+      }catch(err){ notify("Error al importar: "+err.message,"error"); }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value="";
+  };
+
+  if(!user) return <Login onLogin={setUser}/>;
+
+  const isAdmin=user.role==="admin";
+  const TABS=[["dash","Dashboard","📊"],["table","Inventario","📋"],["reports","Reportes","📈"],["compras","Compras","🛒"],["ventas","Ventas","🧾"],["anuladas","Ventas Anuladas","🚫"],["ventasdash","Dashboard Ventas","💹"]];
+  const btn="px-4 py-2 rounded-xl text-sm font-medium transition";
+
+  return (
+    <div className="min-h-screen">
+      {toast && <Toast {...toast} onDone={()=>setToast(null)}/>}
+      {/* Header */}
+      <header className="bg-white border-b border-sand-200 sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-baseline gap-3">
+            <span className="font-serif text-2xl font-bold tracking-widest text-ink">MERCER</span>
+            <span className="text-[10px] uppercase tracking-[0.25em] text-sand-500 hidden sm:inline">Stock de Alfombras</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={()=>setTab("dash")} className="text-xs px-3 py-1.5 rounded-lg border border-sand-300 hover:bg-sand-100" title="Ir al inicio">🏠 <span className="hidden sm:inline">Home</span></button>
+            <span className="text-xs text-sand-600 hidden sm:inline">{user.name} · {isAdmin?"Admin":"Consulta"}</span>
+            <span className="text-[10px]">{CLOUD?"☁":"💾"}</span>
+            <button onClick={()=>{setUser(null);setTab("dash");}} className="text-xs px-3 py-1.5 rounded-lg border border-sand-300 hover:bg-sand-100">Salir</button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Nav + acciones */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <nav className="flex gap-2 bg-white p-1 rounded-2xl border border-sand-200">
+            {TABS.map(([k,l,i])=>(
+              <button key={k} onClick={()=>setTab(k)} className={btn+(tab===k?" bg-ink text-white":" text-sand-700 hover:bg-sand-100")}>{i} <span className="hidden sm:inline">{l}</span></button>
+            ))}
+          </nav>
+          <div className="flex flex-wrap gap-2">
+            {isAdmin && <button onClick={()=>{setEditing(null);setShowForm(true);}} className="px-4 py-2 rounded-xl bg-ink text-white text-sm font-semibold hover:bg-sand-900">+ Compra</button>}
+            <div className="flex gap-1">
+              <button onClick={()=>exportExcel(rows)} className="px-3 py-2 rounded-xl border border-sand-300 text-sm hover:bg-sand-100" title="Excel">📗</button>
+              <button onClick={()=>exportPDFContext(tab,{rows,ventas})} className="px-3 py-2 rounded-xl border border-sand-300 text-sm hover:bg-sand-100" title="Descargar PDF de esta vista">📕</button>
+              {isAdmin && <button onClick={()=>fileRef.current.click()} className="px-3 py-2 rounded-xl border border-sand-300 text-sm hover:bg-sand-100" title="Importar Excel">📥</button>}
+              <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={importExcel}/>
+            </div>
+          </div>
+        </div>
+
+        {loading ? <div className="text-center py-20 text-sand-500">Cargando datos…</div> : (
+          <>
+            {tab==="dash" && <Dashboard rows={rows}/>}
+            {tab==="table" && <Table rows={rows} role={user.role} onEdit={(r)=>{setEditing(r);setShowForm(true);}} onDelete={(r)=>setConfirm(r)} onStock={changeStock}/>}
+            {tab==="reports" && <Reports rows={rows}/>}
+            {tab==="compras" && <Table rows={rows} role={user.role} onEdit={(r)=>{setEditing(r);setShowForm(true);}} onDelete={(r)=>setConfirm(r)} onStock={changeStock}/>}
+            {tab==="ventas" && <VentasPanel ventas={ventas} role={user.role} onNew={()=>{setEditingVenta(null);setShowVentaForm(true);}} onEdit={(v)=>{setEditingVenta(v);setShowVentaForm(true);}} onAnular={(v)=>{setMotivoAnul("");setConfirmVenta(v);}}/>}
+            {tab==="anuladas" && <VentasAnuladasPanel ventas={ventas} role={user.role} onRestaurar={restaurarVenta} onEliminar={(v)=>setConfirmDelVenta(v)}/>}
+            {tab==="ventasdash" && <VentasDashboard ventas={ventas}/>}
+          </>
+        )}
+      </main>
+
+      {showForm && <ProductForm initial={editing} onSave={save} onClose={()=>{setShowForm(false);setEditing(null);}} containers={containers}/>}
+      {showVentaForm && <VentaForm initial={editingVenta} onSave={saveVenta} onClose={()=>{setShowVentaForm(false);setEditingVenta(null);}} productos={rows}/>}
+
+      {confirmVenta && (
+        <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4" onClick={()=>{setConfirmVenta(null);setMotivoAnul("");setReintegrar(true);}}>
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full fade" onClick={e=>e.stopPropagation()}>
+            <h3 className="font-serif text-xl mb-2">¿Anular venta?</h3>
+            <p className="text-sm text-sand-600 mb-3">Vas a anular la venta de <b>{confirmVenta.producto}</b> ({confirmVenta.fecha}). Quedará registrada en <b>Ventas Anuladas</b>.</p>
+            <label className="block text-xs font-semibold text-sand-700 mb-1">¿Reintegrar el stock? ({confirmVenta.cantidad} u.)</label>
+            <div className="flex gap-2 mb-4">
+              <button onClick={()=>setReintegrar(true)} className={"flex-1 px-3 py-2 rounded-lg border text-sm font-medium "+(reintegrar?"bg-ink text-white border-ink":"border-sand-300 text-sand-700 hover:bg-sand-100")}>Sí, reintegrar</button>
+              <button onClick={()=>setReintegrar(false)} className={"flex-1 px-3 py-2 rounded-lg border text-sm font-medium "+(!reintegrar?"bg-ink text-white border-ink":"border-sand-300 text-sand-700 hover:bg-sand-100")}>No reintegrar</button>
+            </div>
+            <label className="block text-xs font-semibold text-sand-700 mb-1">Motivo de anulación (opcional)</label>
+            <input value={motivoAnul} onChange={e=>setMotivoAnul(e.target.value)} className="w-full mb-4 px-3 py-2 rounded-lg border border-sand-300 focus:border-sand-500 outline-none bg-sand-50 text-sm" placeholder="Ej: devolución, error de carga…"/>
+            <div className="flex gap-3 justify-end">
+              <button onClick={()=>{setConfirmVenta(null);setMotivoAnul("");setReintegrar(true);}} className="px-4 py-2 rounded-xl border border-sand-300 hover:bg-sand-100">Cancelar</button>
+              <button onClick={doAnularVenta} className="px-5 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 font-semibold">Anular</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDelVenta && (
+        <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4" onClick={()=>setConfirmDelVenta(null)}>
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full fade" onClick={e=>e.stopPropagation()}>
+            <h3 className="font-serif text-xl mb-2">¿Eliminar definitivamente?</h3>
+            <p className="text-sm text-sand-600 mb-5">Vas a borrar para siempre la venta anulada de <b>{confirmDelVenta.producto}</b> ({confirmDelVenta.fecha}). Esta acción no se puede deshacer y no modifica el stock.</p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={()=>setConfirmDelVenta(null)} className="px-4 py-2 rounded-xl border border-sand-300 hover:bg-sand-100">Cancelar</button>
+              <button onClick={doDeleteVentaDef} className="px-5 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 font-semibold">Eliminar definitivo</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirm && (
+        <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4" onClick={()=>setConfirm(null)}>
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full fade" onClick={e=>e.stopPropagation()}>
+            <h3 className="font-serif text-xl mb-2">¿Eliminar alfombra?</h3>
+            <p className="text-sm text-sand-600 mb-5">Vas a eliminar <b>{confirm.codigo}</b> — {confirm.nombre}. Esta acción no se puede deshacer.</p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={()=>setConfirm(null)} className="px-4 py-2 rounded-xl border border-sand-300 hover:bg-sand-100">Cancelar</button>
+              <button onClick={doDelete} className="px-5 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 font-semibold">Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
+      <footer className="text-center text-[11px] text-sand-400 py-6">MERCER · Gestión de Stock · RDL Analytics</footer>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
