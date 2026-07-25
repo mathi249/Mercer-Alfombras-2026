@@ -1,0 +1,1957 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+<meta name="theme-color" content="#0A1628" />
+<title>Finanzas · RDL</title>
+<link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkZpbmFuemFzIFJETCIsCiAgInNob3J0X25hbWUiOiAiRmluYW56YXMiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBBMTYyOCIsCiAgInRoZW1lX2NvbG9yIjogIiMwQTE2MjgiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSGRwWkhSb1BTSTFNVElpSUdobGFXZG9kRDBpTlRFeUlpQjJhV1YzUW05NFBTSXdJREFnTlRFeUlEVXhNaUkrUEhKbFkzUWdkMmxrZEdnOUlqVXhNaUlnYUdWcFoyaDBQU0kxTVRJaUlISjRQU0k1TmlJZ1ptbHNiRDBpSXpCQk1UWXlPQ0l2UGp4MFpYaDBJSGc5SWpJMU5pSWdlVDBpTWpjd0lpQm1iMjUwTFhOcGVtVTlJakl3TUNJZ1ptbHNiRDBpSTBNNVFUZzBReUlnWm05dWRDMTNaV2xuYUhROUltSnZiR1FpSUhSbGVIUXRZVzVqYUc5eVBTSnRhV1JrYkdVaUlHUnZiV2x1WVc1MExXSmhjMlZzYVc1bFBTSnRhV1JrYkdVaVBpUThMM1JsZUhRK1BDOXpkbWMrIiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9zdmcreG1sIgogICAgfQogIF0KfQ==" />
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSI5NiIgZmlsbD0iIzBBMTYyOCIvPjx0ZXh0IHg9IjI1NiIgeT0iMjcwIiBmb250LXNpemU9IjIwMCIgZmlsbD0iI0M5QTg0QyIgZm9udC13ZWlnaHQ9ImJvbGQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiPiQ8L3RleHQ+PC9zdmc+" />
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --navy:#0A1628; --navy2:#0F2040; --navy3:#16294a;
+    --gold:#C9A84C; --gold2:#E8C96A; --gold-dim:#9c823a;
+    --ink:#1C2B3A; --paper:#F5F6F8; --card:#FFFFFF;
+    --gray:#8A97A8; --gray2:#D1D9E0; --line:#e6e9ee;
+    --green:#2E9E6B; --red:#D64545; --orange:#E08A3C; --yellow:#E0C24C; --blue:#4A78B0;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;background:var(--paper);color:var(--ink);overscroll-behavior-y:none}
+  #root{min-height:100vh}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:#c7cfd9;border-radius:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  .fade{animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .modal-in{animation:modin .18s ease}
+  @keyframes modin{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+  .sheet-in{animation:sheetin .22s cubic-bezier(.2,.8,.2,1)}
+  @keyframes sheetin{from{transform:translateY(100%)}to{transform:none}}
+  input,select,textarea{font-family:inherit;font-size:16px}
+  .no-spin::-webkit-outer-spin-button,.no-spin::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .no-spin{-moz-appearance:textfield}
+  .tabnum{font-variant-numeric:tabular-nums}
+  button{font-family:inherit}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+  .lift{transition:transform .15s ease, box-shadow .15s ease}
+  .lift:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(10,22,40,.10)}
+  .fab-sh{box-shadow:0 8px 22px rgba(201,168,76,.45)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+/* ══════════════════════════════════════════════════════════════
+   CONFIGURACIÓN SUPABASE
+   Pegá acá tu URL y tu key (formato nuevo sb_publishable_... o anon key clásica).
+   La app normaliza la URL y arma los headers según el formato de la key.
+   ══════════════════════════════════════════════════════════════ */
+// ⬇⬇⬇ EDITÁ SOLO ESTAS 2 LÍNEAS. No borres las comillas. Cada valor en UNA sola línea.
+const SUPA_URL_RAW = "TU_SUPABASE_URL";   // ej: "https://abcdefg.supabase.co"
+const SUPA_KEY     = "TU_SUPABASE_KEY";   // ej: "sb_publishable_xxxxxxxx" (key PÚBLICA)
+
+// ── Normalización robusta (no romper si pegan mal) ──
+function normUrl(u){
+  if(!u) return "";
+  let s = u.trim().replace(/\/+$/,"");
+  s = s.replace(/\/rest\/v1$/,"").replace(/\/rest\/v1\/$/,"");
+  return s;
+}
+const SUPA_URL = normUrl(SUPA_URL_RAW);
+const SUPA_OK = SUPA_URL && SUPA_URL.startsWith("http") && SUPA_KEY && !SUPA_KEY.startsWith("TU_");
+
+// Key formato nuevo (sb_publishable_ / sb_secret_) NO va como Bearer.
+const isNewKey = /^sb_(publishable|secret)_/.test(SUPA_KEY||"");
+function supaHeaders(extra){
+  const h = { "apikey": SUPA_KEY, "Content-Type":"application/json" };
+  if(!isNewKey) h["Authorization"] = "Bearer "+SUPA_KEY;
+  return Object.assign(h, extra||{});
+}
+function restUrl(path){ return SUPA_URL + "/rest/v1/" + path; }
+
+async function sbSelect(table, query){
+  const url = restUrl(table + (query? ("?"+query):""));
+  const r = await fetch(url, { headers: supaHeaders() });
+  if(!r.ok) throw new Error("select "+table+" "+r.status);
+  return r.json();
+}
+async function sbInsert(table, row){
+  const r = await fetch(restUrl(table), {
+    method:"POST", headers: supaHeaders({ "Prefer":"return=representation" }),
+    body: JSON.stringify(row)
+  });
+  if(!r.ok) throw new Error("insert "+table+" "+r.status+" "+await r.text());
+  return r.json();
+}
+async function sbUpdate(table, id, patch){
+  const r = await fetch(restUrl(table+"?id=eq."+id), {
+    method:"PATCH", headers: supaHeaders({ "Prefer":"return=representation" }),
+    body: JSON.stringify(patch)
+  });
+  if(!r.ok) throw new Error("update "+table+" "+r.status);
+  return r.json();
+}
+async function sbDelete(table, id){
+  const r = await fetch(restUrl(table+"?id=eq."+id), {
+    method:"DELETE", headers: supaHeaders()
+  });
+  if(!r.ok) throw new Error("delete "+table+" "+r.status);
+  return true;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HELPERS
+   ══════════════════════════════════════════════════════════════ */
+const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const MESES_C = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+const PALETTE = ['#C9A84C','#4A78B0','#2E9E6B','#D64545','#8C5AA8','#E08A3C','#3d9e9e','#B0546B','#6b7a5b','#5a4938','#D1A0C0','#7ea6d8'];
+
+const fmt = (n)=> "$" + (Number(n)||0).toLocaleString("es-AR",{minimumFractionDigits:0, maximumFractionDigits:0});
+const fmt2 = (n)=> "$" + (Number(n)||0).toLocaleString("es-AR",{minimumFractionDigits:2, maximumFractionDigits:2});
+const todayISO = ()=> new Date().toISOString().slice(0,10);
+const monthKey = (d)=> (d||todayISO()).slice(0,7); // YYYY-MM
+const parseD = (s)=> { const [y,m,d]=(s||todayISO()).split("-").map(Number); return new Date(y,(m||1)-1,d||1); };
+const daysBetween = (a,b)=> Math.round((parseD(a) - parseD(b))/86400000);
+const fmtDate = (s)=> { if(!s) return "—"; const d=parseD(s); return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear(); };
+const uid = ()=> Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const clone = (o)=> JSON.parse(JSON.stringify(o));
+
+function addMonthsISO(iso, n){
+  const d = parseD(iso); d.setMonth(d.getMonth()+n);
+  return d.toISOString().slice(0,10);
+}
+function nextDateByFreq(iso, freq){
+  switch(freq){
+    case "Semanal": { const d=parseD(iso); d.setDate(d.getDate()+7); return d.toISOString().slice(0,10); }
+    case "Mensual": return addMonthsISO(iso,1);
+    case "Trimestral": return addMonthsISO(iso,3);
+    case "Semestral": return addMonthsISO(iso,6);
+    case "Anual": return addMonthsISO(iso,12);
+    default: return null;
+  }
+}
+
+// LocalStorage fallback (si no hay Supabase configurado, la app funciona igual en el dispositivo)
+const LS_KEY = "rdl_finanzas_v1";
+function lsRead(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||"{}"); }catch(e){ return {}; } }
+function lsWrite(data){ try{ localStorage.setItem(LS_KEY, JSON.stringify(data)); }catch(e){} }
+
+/* Datos por defecto (primer uso) */
+const DEFAULT_CATS = [
+  {id:uid(), nombre:"Sueldo", tipo:"ingreso", color:"#2E9E6B"},
+  {id:uid(), nombre:"Freelance", tipo:"ingreso", color:"#4A78B0"},
+  {id:uid(), nombre:"Inversiones", tipo:"ingreso", color:"#C9A84C"},
+  {id:uid(), nombre:"Otros ingresos", tipo:"ingreso", color:"#8C5AA8"},
+  {id:uid(), nombre:"Supermercado", tipo:"gasto", color:"#D64545"},
+  {id:uid(), nombre:"Transporte", tipo:"gasto", color:"#E08A3C"},
+  {id:uid(), nombre:"Servicios", tipo:"gasto", color:"#4A78B0"},
+  {id:uid(), nombre:"Salud", tipo:"gasto", color:"#2E9E6B"},
+  {id:uid(), nombre:"Educación", tipo:"gasto", color:"#8C5AA8"},
+  {id:uid(), nombre:"Hogar", tipo:"gasto", color:"#3d9e9e"},
+  {id:uid(), nombre:"Restaurantes", tipo:"gasto", color:"#B0546B"},
+  {id:uid(), nombre:"Entretenimiento", tipo:"gasto", color:"#D1A0C0"},
+  {id:uid(), nombre:"Viajes", tipo:"gasto", color:"#7ea6d8"},
+  {id:uid(), nombre:"Impuestos", tipo:"gasto", color:"#5a4938"},
+  {id:uid(), nombre:"Seguros", tipo:"gasto", color:"#6b7a5b"},
+  {id:uid(), nombre:"Tarjetas", tipo:"gasto", color:"#9c823a"},
+  {id:uid(), nombre:"Otros gastos", tipo:"gasto", color:"#8A97A8"},
+];
+const DEFAULT_ACCOUNTS = [
+  {id:uid(), nombre:"Efectivo", tipo:"Efectivo", saldo_inicial:0, color:"#2E9E6B"},
+  {id:uid(), nombre:"Caja de ahorro", tipo:"Banco", saldo_inicial:0, color:"#4A78B0"},
+  {id:uid(), nombre:"Mercado Pago", tipo:"Billetera", saldo_inicial:0, color:"#4A78B0"},
+];
+
+/* ══════════════════════════════════════════════════════════════
+   COMPONENTES UI BASE
+   ══════════════════════════════════════════════════════════════ */
+
+// ── Toast (confirmaciones discretas) ──
+const ToastCtx = React.createContext(()=>{});
+function ToastHost({children}){
+  const [toasts,setToasts] = useState([]);
+  const push = useCallback((msg, type="ok")=>{
+    const id = uid();
+    setToasts(t=>[...t,{id,msg,type}]);
+    setTimeout(()=> setToasts(t=>t.filter(x=>x.id!==id)), 2600);
+  },[]);
+  return (
+    <ToastCtx.Provider value={push}>
+      {children}
+      <div className="fixed z-[90] left-1/2 -translate-x-1/2 bottom-24 sm:bottom-8 flex flex-col gap-2 items-center pointer-events-none w-full px-4">
+        {toasts.map(t=>(
+          <div key={t.id} className="fade pointer-events-auto max-w-sm w-fit px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg flex items-center gap-2"
+            style={{background: t.type==="err"?"#3a1414":"var(--navy)", color:"#fff", border:"1px solid "+(t.type==="err"?"#D64545":"var(--gold)")}}>
+            <span style={{color: t.type==="err"?"#ff8080":"var(--gold2)"}}>{t.type==="err"?"⚠":"✓"}</span>
+            {t.msg}
+          </div>
+        ))}
+      </div>
+    </ToastCtx.Provider>
+  );
+}
+const useToast = ()=> React.useContext(ToastCtx);
+
+// ── Modal centrado (no cierra al click en backdrop por accidente) ──
+function Modal({open,onClose,title,children,max="max-w-lg",footer}){
+  useEffect(()=>{
+    if(!open) return;
+    const h=(e)=>{ if(e.key==="Escape") onClose(); };
+    window.addEventListener("keydown",h);
+    document.body.style.overflow="hidden";
+    return ()=>{ window.removeEventListener("keydown",h); document.body.style.overflow=""; };
+  },[open]);
+  if(!open) return null;
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4"
+         style={{background:"rgba(10,22,40,.55)", backdropFilter:"blur(2px)"}}
+         onMouseDown={(e)=>{ if(e.target===e.currentTarget){/* no cerrar */} }}>
+      <div className={"bg-white w-full "+max+" rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[92vh] flex flex-col sheet-in sm:modal-in"}
+           onMouseDown={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-3.5 border-b" style={{borderColor:"var(--line)"}}>
+          <h3 className="font-bold text-[17px]" style={{color:"var(--navy)"}}>{title}</h3>
+          <button onClick={onClose} className="w-9 h-9 rounded-full flex items-center justify-center text-xl hover:bg-gray-100 transition" style={{color:"var(--gray)"}}>✕</button>
+        </div>
+        <div className="overflow-y-auto px-5 py-4">{children}</div>
+        {footer && <div className="px-5 py-3.5 border-t bg-gray-50/60 rounded-b-2xl" style={{borderColor:"var(--line)"}}>{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+// ── Confirm ──
+function useConfirm(){
+  const [state,setState] = useState(null);
+  const ask = useCallback((opts)=> new Promise(res=>{
+    setState({...opts, resolve:res});
+  }),[]);
+  const node = state ? (
+    <div className="fixed inset-0 z-[95] flex items-center justify-center p-4" style={{background:"rgba(10,22,40,.6)"}}>
+      <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-5 modal-in">
+        <div className="flex items-start gap-3 mb-3">
+          <div className="w-11 h-11 rounded-full flex items-center justify-center text-xl shrink-0"
+               style={{background: state.danger?"#fdeaea":"#fdf6e3", color: state.danger?"var(--red)":"var(--gold-dim)"}}>
+            {state.danger?"🗑":"?"}
+          </div>
+          <div>
+            <div className="font-bold text-[16px]" style={{color:"var(--navy)"}}>{state.title}</div>
+            {state.message && <div className="text-sm text-gray-500 mt-1">{state.message}</div>}
+          </div>
+        </div>
+        <div className="flex gap-2 justify-end mt-4">
+          <button onClick={()=>{state.resolve(false);setState(null);}} className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100 transition">Cancelar</button>
+          <button onClick={()=>{state.resolve(true);setState(null);}} className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition"
+                  style={{background: state.danger?"var(--red)":"var(--navy)"}}>{state.confirmText||"Confirmar"}</button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+  return [ask, node];
+}
+
+// ── Campos de formulario (definidos a nivel módulo: evita focus-loss) ──
+function Field({label,children,className=""}){
+  return (
+    <label className={"block "+className}>
+      <span className="block text-[12px] font-semibold mb-1.5 uppercase tracking-wide" style={{color:"var(--gray)"}}>{label}</span>
+      {children}
+    </label>
+  );
+}
+const inpCls = "w-full px-3.5 py-2.5 rounded-xl border bg-white outline-none transition focus:border-[var(--gold)] focus:ring-2 focus:ring-[var(--gold)]/20";
+function TextInput(props){ return <input {...props} className={inpCls+" "+(props.className||"")} style={{borderColor:"var(--gray2)"}} />; }
+function NumInput(props){ return <input inputMode="decimal" {...props} className={inpCls+" no-spin text-right tabnum "+(props.className||"")} style={{borderColor:"var(--gray2)"}} />; }
+function SelectInput({children,...p}){ return <select {...p} className={inpCls+" appearance-none bg-white "+(p.className||"")} style={{borderColor:"var(--gray2)"}}>{children}</select>; }
+
+// ── Botones ──
+function BtnPrimary({children,className="",...p}){
+  return <button {...p} className={"px-4 py-2.5 rounded-xl font-semibold text-white transition active:scale-[.98] disabled:opacity-50 "+className}
+    style={{background:"var(--navy)"}}>{children}</button>;
+}
+function BtnGold({children,className="",...p}){
+  return <button {...p} className={"px-4 py-2.5 rounded-xl font-bold transition active:scale-[.98] disabled:opacity-50 "+className}
+    style={{background:"var(--gold)", color:"var(--navy)"}}>{children}</button>;
+}
+function BtnGhost({children,className="",...p}){
+  return <button {...p} className={"px-3.5 py-2 rounded-lg font-semibold text-sm transition hover:bg-gray-100 "+className}
+    style={{color:"var(--navy)"}}>{children}</button>;
+}
+
+// ── KPI Card ──
+function Kpi({label,value,sub,accent="var(--gold)",icon,onClick,tone}){
+  return (
+    <div onClick={onClick} className={"bg-white rounded-2xl p-4 border relative overflow-hidden lift "+(onClick?"cursor-pointer":"")}
+         style={{borderColor:"var(--line)"}}>
+      <div className="absolute top-0 left-0 w-1 h-full" style={{background:accent}}></div>
+      <div className="flex items-start justify-between">
+        <div className="text-[11.5px] font-bold uppercase tracking-wide pl-1.5" style={{color:"var(--gray)"}}>{label}</div>
+        {icon && <div className="text-lg opacity-70">{icon}</div>}
+      </div>
+      <div className="text-[22px] sm:text-[24px] font-extrabold mt-1 pl-1.5 tabnum leading-tight"
+           style={{color: tone==="red"?"var(--red)":tone==="green"?"var(--green)":"var(--navy)"}}>{value}</div>
+      {sub && <div className="text-[12px] mt-0.5 pl-1.5" style={{color:"var(--gray)"}}>{sub}</div>}
+    </div>
+  );
+}
+
+// ── Chart wrapper (canvas gestionado; NombreChartBox para no chocar con Chart.js global) ──
+function ChartBox({type,data,options,height=220}){
+  const ref = useRef(null);
+  const inst = useRef(null);
+  useEffect(()=>{
+    if(!ref.current) return;
+    if(inst.current){ inst.current.destroy(); inst.current=null; }
+    inst.current = new Chart(ref.current.getContext("2d"), {
+      type, data,
+      options: Object.assign({
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ labels:{ font:{size:11}, color:"#5a6b7d", usePointStyle:true, boxWidth:8, padding:12 } } },
+        scales: (type==="doughnut"||type==="pie") ? {} : {
+          x:{ ticks:{color:"#8A97A8",font:{size:10}}, grid:{display:false} },
+          y:{ ticks:{color:"#8A97A8",font:{size:10}, callback:(v)=> "$"+Number(v).toLocaleString("es-AR")}, grid:{color:"#eef1f5"} }
+        }
+      }, options||{})
+    });
+    return ()=>{ if(inst.current){ inst.current.destroy(); inst.current=null; } };
+  },[type,JSON.stringify(data),JSON.stringify(options)]);
+  return <div style={{height}}><canvas ref={ref}></canvas></div>;
+}
+
+// ── Barra de progreso (presupuestos) ──
+function Progress({pct,color}){
+  const p = Math.min(100, Math.max(0, pct));
+  const c = pct>=100 ? "var(--red)" : pct>=80 ? "var(--orange)" : (color||"var(--green)");
+  return (
+    <div className="w-full h-2.5 rounded-full overflow-hidden" style={{background:"#eef1f5"}}>
+      <div className="h-full rounded-full transition-all" style={{width:p+"%", background:c}}></div>
+    </div>
+  );
+}
+
+// ── Pill / badge ──
+function Pill({children,bg,fg}){
+  return <span className="px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap" style={{background:bg, color:fg}}>{children}</span>;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CAPA DE DATOS — Store con Supabase + fallback localStorage
+   Tablas: fin_movimientos, fin_categorias, fin_cuentas, fin_obligaciones, fin_presupuestos
+   ══════════════════════════════════════════════════════════════ */
+const TABLES = {
+  mov:"fin_movimientos", cat:"fin_categorias", acc:"fin_cuentas", obl:"fin_obligaciones", pre:"fin_presupuestos"
+};
+
+function useStore(){
+  const [movs,setMovs] = useState([]);
+  const [cats,setCats] = useState([]);
+  const [accs,setAccs] = useState([]);
+  const [obls,setObls] = useState([]);
+  const [pres,setPres] = useState([]);
+  const [loading,setLoading] = useState(true);
+  const [online,setOnline] = useState(SUPA_OK);
+
+  // Carga inicial
+  const load = useCallback(async ()=>{
+    setLoading(true);
+    if(SUPA_OK){
+      try{
+        const [m,c,a,o,p] = await Promise.all([
+          sbSelect(TABLES.mov,"order=fecha.desc"),
+          sbSelect(TABLES.cat,"order=nombre.asc"),
+          sbSelect(TABLES.acc,"order=nombre.asc"),
+          sbSelect(TABLES.obl,"order=fecha_venc.asc"),
+          sbSelect(TABLES.pre,"select=*"),
+        ]);
+        // Sembrar defaults si vacío
+        let cc=c, aa=a;
+        if(c.length===0){ cc = await sbInsert(TABLES.cat, DEFAULT_CATS.map(x=>({...x}))); }
+        if(a.length===0){ aa = await sbInsert(TABLES.acc, DEFAULT_ACCOUNTS.map(x=>({...x}))); }
+        setMovs(m); setCats(cc); setAccs(aa); setObls(o); setPres(p);
+        setOnline(true); setLoading(false);
+        return;
+      }catch(e){
+        console.warn("Supabase no disponible, uso local:", e.message);
+        setOnline(false);
+      }
+    }
+    // Fallback localStorage
+    const d = lsRead();
+    setMovs(d.movs||[]);
+    setCats(d.cats && d.cats.length? d.cats : DEFAULT_CATS);
+    setAccs(d.accs && d.accs.length? d.accs : DEFAULT_ACCOUNTS);
+    setObls(d.obls||[]);
+    setPres(d.pres||[]);
+    setLoading(false);
+  },[]);
+
+  useEffect(()=>{ load(); },[load]);
+
+  // Persistir local siempre (backup) cuando cambian datos y estamos offline
+  useEffect(()=>{
+    if(!online) lsWrite({movs,cats,accs,obls,pres});
+  },[movs,cats,accs,obls,pres,online]);
+
+  // Sincronización en tiempo real (polling liviano si online)
+  useEffect(()=>{
+    if(!online) return;
+    const t = setInterval(async ()=>{
+      try{
+        const [m,o] = await Promise.all([
+          sbSelect(TABLES.mov,"order=fecha.desc"),
+          sbSelect(TABLES.obl,"order=fecha_venc.asc"),
+        ]);
+        setMovs(m); setObls(o);
+      }catch(e){}
+    }, 20000);
+    return ()=> clearInterval(t);
+  },[online]);
+
+  // ── Operaciones genéricas ──
+  const opInsert = async (kind, row)=>{
+    const table = TABLES[kind];
+    const withId = {...row, id: row.id||uid()};
+    if(online){ const [r]=await sbInsert(table, {...row}); return r; }
+    return withId;
+  };
+  const opUpdate = async (kind, id, patch)=>{
+    const table = TABLES[kind];
+    if(online){ const [r]=await sbUpdate(table, id, patch); return r; }
+    return {id,...patch};
+  };
+  const opDelete = async (kind, id)=>{
+    const table = TABLES[kind];
+    if(online){ await sbDelete(table, id); }
+    return true;
+  };
+
+  const setters = { mov:setMovs, cat:setCats, acc:setAccs, obl:setObls, pre:setPres };
+  const lists   = { mov:movs, cat:cats, acc:accs, obl:obls, pre:pres };
+
+  // API expuesta
+  const create = async (kind, row)=>{
+    const r = await opInsert(kind, row);
+    setters[kind](prev=> [r,...prev].sort(sortFor(kind)) );
+    return r;
+  };
+  const update = async (kind, id, patch)=>{
+    const r = await opUpdate(kind, id, patch);
+    setters[kind](prev=> prev.map(x=> x.id===id ? {...x,...r} : x).sort(sortFor(kind)) );
+    return r;
+  };
+  const remove = async (kind, id)=>{
+    await opDelete(kind, id);
+    setters[kind](prev=> prev.filter(x=> x.id!==id) );
+  };
+  // Inserción múltiple (recurrencia genera siguiente)
+  const createMany = async (kind, rows)=>{
+    const created=[];
+    for(const row of rows){ created.push(await opInsert(kind,row)); }
+    setters[kind](prev=> [...created,...prev].sort(sortFor(kind)) );
+    return created;
+  };
+
+  return { movs,cats,accs,obls,pres, loading, online, lists, create, update, remove, createMany, reload:load };
+}
+function sortFor(kind){
+  if(kind==="mov") return (a,b)=> (b.fecha||"").localeCompare(a.fecha||"");
+  if(kind==="obl") return (a,b)=> (a.fecha_venc||"").localeCompare(b.fecha_venc||"");
+  return (a,b)=> (a.nombre||"").localeCompare(b.nombre||"");
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CÁLCULOS FINANCIEROS (memoizados en el componente)
+   ══════════════════════════════════════════════════════════════ */
+function computeAccountBalances(accs, movs){
+  const map = {};
+  accs.forEach(a=> map[a.id] = Number(a.saldo_inicial)||0);
+  movs.forEach(m=>{
+    const imp = Number(m.importe)||0;
+    if(m.tipo==="ingreso"){ if(map[m.cuenta_id]!=null) map[m.cuenta_id]+=imp; }
+    else if(m.tipo==="gasto"){ if(map[m.cuenta_id]!=null) map[m.cuenta_id]-=imp; }
+    else if(m.tipo==="transferencia"){
+      if(map[m.cuenta_id]!=null) map[m.cuenta_id]-=imp;
+      if(map[m.cuenta_destino_id]!=null) map[m.cuenta_destino_id]+=imp;
+    }
+  });
+  return map;
+}
+function statusOf(obl){
+  if(obl.estado==="Pagado") return "Pagado";
+  const dd = daysBetween(obl.fecha_venc, todayISO());
+  if(dd<0) return "Vencido";
+  return "Pendiente";
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FORMULARIO DE MOVIMIENTO
+   ══════════════════════════════════════════════════════════════ */
+function MovForm({initial, cats, accs, defaultTipo, onSave, onCancel}){
+  const [f,setF] = useState(()=> initial ? clone(initial) : {
+    tipo: defaultTipo||"gasto", importe:"", categoria_id:"", cuenta_id: accs[0]?.id||"",
+    cuenta_destino_id: accs[1]?.id||"", medio_pago:"Débito", fecha: todayISO(), descripcion:""
+  });
+  const set = (k,v)=> setF(p=>({...p,[k]:v}));
+  const catsFiltered = cats.filter(c=> c.tipo === (f.tipo==="ingreso"?"ingreso":"gasto"));
+  const isTransfer = f.tipo==="transferencia";
+
+  const submit = ()=>{
+    if(!f.importe || Number(f.importe)<=0) return;
+    if(!isTransfer && !f.categoria_id) return;
+    if(isTransfer && f.cuenta_id===f.cuenta_destino_id) return;
+    onSave({
+      ...f, importe: Number(f.importe),
+      categoria_id: isTransfer? null : f.categoria_id,
+      cuenta_destino_id: isTransfer? f.cuenta_destino_id : null,
+    });
+  };
+
+  const tipos = [
+    {k:"gasto", label:"Gasto", color:"var(--red)"},
+    {k:"ingreso", label:"Ingreso", color:"var(--green)"},
+    {k:"transferencia", label:"Transferencia", color:"var(--blue)"},
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Selector tipo */}
+      <div className="grid grid-cols-3 gap-2">
+        {tipos.map(t=>(
+          <button key={t.k} onClick={()=>set("tipo",t.k)}
+            className="py-2.5 rounded-xl font-bold text-sm border-2 transition"
+            style={ f.tipo===t.k
+              ? {borderColor:t.color, background:t.color, color:"#fff"}
+              : {borderColor:"var(--line)", background:"#fff", color:"var(--gray)"} }>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <Field label="Importe">
+        <div className="relative">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-lg" style={{color:"var(--gray)"}}>$</span>
+          <input inputMode="decimal" autoFocus value={f.importe} onChange={e=>set("importe",e.target.value)}
+            className={inpCls+" no-spin text-right tabnum text-xl font-bold pl-8"} style={{borderColor:"var(--gray2)"}} placeholder="0"/>
+        </div>
+      </Field>
+
+      {!isTransfer && (
+        <Field label="Categoría">
+          <SelectInput value={f.categoria_id} onChange={e=>set("categoria_id",e.target.value)}>
+            <option value="">Elegir…</option>
+            {catsFiltered.map(c=> <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          </SelectInput>
+        </Field>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={isTransfer?"Desde cuenta":"Cuenta"}>
+          <SelectInput value={f.cuenta_id} onChange={e=>set("cuenta_id",e.target.value)}>
+            {accs.map(a=> <option key={a.id} value={a.id}>{a.nombre}</option>)}
+          </SelectInput>
+        </Field>
+        {isTransfer ? (
+          <Field label="Hacia cuenta">
+            <SelectInput value={f.cuenta_destino_id} onChange={e=>set("cuenta_destino_id",e.target.value)}>
+              {accs.map(a=> <option key={a.id} value={a.id}>{a.nombre}</option>)}
+            </SelectInput>
+          </Field>
+        ) : (
+          <Field label="Medio de pago">
+            <SelectInput value={f.medio_pago} onChange={e=>set("medio_pago",e.target.value)}>
+              {["Débito","Crédito","Efectivo","Transferencia","QR / Billetera","Otro"].map(m=> <option key={m}>{m}</option>)}
+            </SelectInput>
+          </Field>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Fecha">
+          <input type="date" value={f.fecha} onChange={e=>set("fecha",e.target.value)} className={inpCls} style={{borderColor:"var(--gray2)"}}/>
+        </Field>
+        <Field label="Descripción">
+          <TextInput value={f.descripcion} onChange={e=>set("descripcion",e.target.value)} placeholder="Opcional"/>
+        </Field>
+      </div>
+
+      <div className="flex gap-2 pt-1">
+        <BtnGhost onClick={onCancel} className="flex-1 border" >Cancelar</BtnGhost>
+        <BtnGold onClick={submit} className="flex-1">{initial?"Guardar cambios":"Registrar"}</BtnGold>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FORMULARIO DE OBLIGACIÓN / PRÓXIMO PAGO
+   ══════════════════════════════════════════════════════════════ */
+function OblForm({initial, cats, accs, onSave, onCancel}){
+  const [f,setF] = useState(()=> initial ? clone(initial) : {
+    nombre:"", categoria_id: cats.find(c=>c.tipo==="gasto")?.id||"", importe:"",
+    fecha_venc: todayISO(), estado:"Pendiente", frecuencia:"Mensual",
+    cuenta_id: accs[0]?.id||"", observaciones:""
+  });
+  const set = (k,v)=> setF(p=>({...p,[k]:v}));
+  const gastoCats = cats.filter(c=>c.tipo==="gasto");
+  const submit = ()=>{
+    if(!f.nombre.trim() || !f.importe || Number(f.importe)<=0) return;
+    onSave({...f, importe:Number(f.importe)});
+  };
+  return (
+    <div className="space-y-4">
+      <Field label="Nombre del pago">
+        <TextInput autoFocus value={f.nombre} onChange={e=>set("nombre",e.target.value)} placeholder="Ej: Alquiler, Tarjeta Visa, Netflix"/>
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Importe">
+          <NumInput value={f.importe} onChange={e=>set("importe",e.target.value)} placeholder="0"/>
+        </Field>
+        <Field label="Vence el">
+          <input type="date" value={f.fecha_venc} onChange={e=>set("fecha_venc",e.target.value)} className={inpCls} style={{borderColor:"var(--gray2)"}}/>
+        </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Categoría">
+          <SelectInput value={f.categoria_id} onChange={e=>set("categoria_id",e.target.value)}>
+            {gastoCats.map(c=> <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          </SelectInput>
+        </Field>
+        <Field label="Frecuencia">
+          <SelectInput value={f.frecuencia} onChange={e=>set("frecuencia",e.target.value)}>
+            {["Único","Semanal","Mensual","Trimestral","Semestral","Anual"].map(m=> <option key={m}>{m}</option>)}
+          </SelectInput>
+        </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Se paga desde">
+          <SelectInput value={f.cuenta_id} onChange={e=>set("cuenta_id",e.target.value)}>
+            {accs.map(a=> <option key={a.id} value={a.id}>{a.nombre}</option>)}
+          </SelectInput>
+        </Field>
+        <Field label="Estado">
+          <SelectInput value={f.estado} onChange={e=>set("estado",e.target.value)}>
+            {["Pendiente","Pagado"].map(m=> <option key={m}>{m}</option>)}
+          </SelectInput>
+        </Field>
+      </div>
+      <Field label="Observaciones">
+        <TextInput value={f.observaciones} onChange={e=>set("observaciones",e.target.value)} placeholder="Opcional"/>
+      </Field>
+      <div className="flex gap-2 pt-1">
+        <BtnGhost onClick={onCancel} className="flex-1 border">Cancelar</BtnGhost>
+        <BtnGold onClick={submit} className="flex-1">{initial?"Guardar":"Agregar pago"}</BtnGold>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FORMULARIO DE CUENTA
+   ══════════════════════════════════════════════════════════════ */
+function AccForm({initial,onSave,onCancel}){
+  const [f,setF]=useState(()=> initial? clone(initial) : {nombre:"",tipo:"Banco",saldo_inicial:"",color:"#4A78B0"});
+  const set=(k,v)=>setF(p=>({...p,[k]:v}));
+  const colores=["#2E9E6B","#4A78B0","#C9A84C","#8C5AA8","#D64545","#E08A3C","#3d9e9e","#B0546B"];
+  return (
+    <div className="space-y-4">
+      <Field label="Nombre"><TextInput autoFocus value={f.nombre} onChange={e=>set("nombre",e.target.value)} placeholder="Ej: Mercado Pago"/></Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Tipo">
+          <SelectInput value={f.tipo} onChange={e=>set("tipo",e.target.value)}>
+            {["Efectivo","Banco","Billetera","Tarjeta","Inversión","Otra"].map(t=><option key={t}>{t}</option>)}
+          </SelectInput>
+        </Field>
+        <Field label="Saldo inicial"><NumInput value={f.saldo_inicial} onChange={e=>set("saldo_inicial",e.target.value)} placeholder="0"/></Field>
+      </div>
+      <Field label="Color">
+        <div className="flex gap-2 flex-wrap">
+          {colores.map(c=>(
+            <button key={c} onClick={()=>set("color",c)} className="w-8 h-8 rounded-full border-2 transition"
+              style={{background:c, borderColor: f.color===c?"var(--navy)":"transparent", transform: f.color===c?"scale(1.15)":"none"}}/>
+          ))}
+        </div>
+      </Field>
+      <div className="flex gap-2 pt-1">
+        <BtnGhost onClick={onCancel} className="flex-1 border">Cancelar</BtnGhost>
+        <BtnGold onClick={()=>{ if(f.nombre.trim()) onSave({...f, saldo_inicial:Number(f.saldo_inicial)||0}); }} className="flex-1">{initial?"Guardar":"Crear cuenta"}</BtnGold>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FORMULARIO DE CATEGORÍA
+   ══════════════════════════════════════════════════════════════ */
+function CatForm({initial,onSave,onCancel}){
+  const [f,setF]=useState(()=> initial? clone(initial) : {nombre:"",tipo:"gasto",color:"#D64545"});
+  const set=(k,v)=>setF(p=>({...p,[k]:v}));
+  const colores=PALETTE;
+  return (
+    <div className="space-y-4">
+      <Field label="Nombre"><TextInput autoFocus value={f.nombre} onChange={e=>set("nombre",e.target.value)} placeholder="Ej: Mascotas"/></Field>
+      <Field label="Tipo">
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={()=>set("tipo","ingreso")} className="py-2.5 rounded-xl font-bold text-sm border-2 transition"
+            style={f.tipo==="ingreso"?{borderColor:"var(--green)",background:"var(--green)",color:"#fff"}:{borderColor:"var(--line)",color:"var(--gray)"}}>Ingreso</button>
+          <button onClick={()=>set("tipo","gasto")} className="py-2.5 rounded-xl font-bold text-sm border-2 transition"
+            style={f.tipo==="gasto"?{borderColor:"var(--red)",background:"var(--red)",color:"#fff"}:{borderColor:"var(--line)",color:"var(--gray)"}}>Gasto</button>
+        </div>
+      </Field>
+      <Field label="Color">
+        <div className="flex gap-2 flex-wrap">
+          {colores.map(c=>(
+            <button key={c} onClick={()=>set("color",c)} className="w-8 h-8 rounded-full border-2 transition"
+              style={{background:c, borderColor: f.color===c?"var(--navy)":"transparent", transform: f.color===c?"scale(1.15)":"none"}}/>
+          ))}
+        </div>
+      </Field>
+      <div className="flex gap-2 pt-1">
+        <BtnGhost onClick={onCancel} className="flex-1 border">Cancelar</BtnGhost>
+        <BtnGold onClick={()=>{ if(f.nombre.trim()) onSave(f); }} className="flex-1">{initial?"Guardar":"Crear categoría"}</BtnGold>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   VISTA: DASHBOARD
+   ══════════════════════════════════════════════════════════════ */
+function Dashboard({store, onQuickAdd, goTab}){
+  const {movs,cats,accs,obls,pres} = store;
+  const mk = monthKey();
+  const catMap = useMemo(()=> Object.fromEntries(cats.map(c=>[c.id,c])),[cats]);
+  const accMap = useMemo(()=> Object.fromEntries(accs.map(a=>[a.id,a])),[accs]);
+  const balances = useMemo(()=> computeAccountBalances(accs,movs),[accs,movs]);
+
+  const calc = useMemo(()=>{
+    const monthMovs = movs.filter(m=> monthKey(m.fecha)===mk);
+    const ingresos = monthMovs.filter(m=>m.tipo==="ingreso").reduce((s,m)=>s+Number(m.importe||0),0);
+    const gastos   = monthMovs.filter(m=>m.tipo==="gasto").reduce((s,m)=>s+Number(m.importe||0),0);
+    const ahorro = ingresos-gastos;
+    const pctAhorro = ingresos>0? (ahorro/ingresos*100) : 0;
+    const saldoTotal = Object.values(balances).reduce((s,v)=>s+v,0);
+
+    // Obligaciones pendientes (no pagadas)
+    const pend = obls.filter(o=> statusOf(o)!=="Pagado");
+    const totalPend = pend.reduce((s,o)=>s+Number(o.importe||0),0);
+    const vencidos = obls.filter(o=> statusOf(o)==="Vencido");
+    const dineroLibre = saldoTotal - totalPend;
+
+    // Próximo pago
+    const futuros = pend.slice().sort((a,b)=> (a.fecha_venc||"").localeCompare(b.fecha_venc||""));
+    const prox = futuros[0]||null;
+    const proxDias = prox? daysBetween(prox.fecha_venc, todayISO()) : null;
+
+    // Gastos por categoría (mes)
+    const byCat = {};
+    monthMovs.filter(m=>m.tipo==="gasto").forEach(m=>{
+      const c = catMap[m.categoria_id]; const key = c?c.nombre:"Sin categoría";
+      byCat[key] = (byCat[key]||0)+Number(m.importe||0);
+    });
+
+    // Presupuesto del mes: total presupuestado vs gastado
+    const presMes = pres.filter(p=> p.mes===mk);
+    const totalPresup = presMes.reduce((s,p)=>s+Number(p.monto||0),0);
+    const pctPresup = totalPresup>0? (gastos/totalPresup*100) : 0;
+
+    return {ingresos,gastos,ahorro,pctAhorro,saldoTotal,totalPend,vencidos,dineroLibre,prox,proxDias,byCat,pendCount:pend.length,totalPresup,pctPresup};
+  },[movs,obls,pres,balances,mk,catMap]);
+
+  // Serie últimos 6 meses (ingresos vs gastos + ahorro)
+  const serie = useMemo(()=>{
+    const arr=[];
+    const now = new Date();
+    for(let i=5;i>=0;i--){
+      const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+      const key = d.toISOString().slice(0,7);
+      const mm = movs.filter(m=> monthKey(m.fecha)===key);
+      const ing = mm.filter(m=>m.tipo==="ingreso").reduce((s,m)=>s+Number(m.importe||0),0);
+      const gas = mm.filter(m=>m.tipo==="gasto").reduce((s,m)=>s+Number(m.importe||0),0);
+      arr.push({label:MESES_C[d.getMonth()], ing, gas, aho:ing-gas});
+    }
+    return arr;
+  },[movs]);
+
+  const catEntries = Object.entries(calc.byCat).sort((a,b)=>b[1]-a[1]);
+  const ultimos = movs.slice(0,6);
+  const proxPagos = obls.filter(o=>statusOf(o)!=="Pagado").sort((a,b)=>(a.fecha_venc||"").localeCompare(b.fecha_venc||"")).slice(0,5);
+
+  return (
+    <div className="fade space-y-5">
+      {/* Fila resumen principal */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Kpi label="Saldo disponible" value={fmt(calc.saldoTotal)} sub="Todas las cuentas" accent="var(--gold)" icon="💰"/>
+        <Kpi label="Dinero libre" value={fmt(calc.dineroLibre)} sub="Luego de pagos pendientes" accent="var(--green)" tone={calc.dineroLibre<0?"red":"green"} icon="✨"/>
+        <Kpi label="Ingresos del mes" value={fmt(calc.ingresos)} sub={MESES[new Date().getMonth()]} accent="var(--green)" icon="↑"/>
+        <Kpi label="Gastos del mes" value={fmt(calc.gastos)} sub={MESES[new Date().getMonth()]} accent="var(--red)" icon="↓"/>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Kpi label="Ahorro del mes" value={fmt(calc.ahorro)} sub={calc.pctAhorro.toFixed(0)+"% de ingresos"} accent="var(--blue)" tone={calc.ahorro<0?"red":"green"}/>
+        <Kpi label="Pagos pendientes" value={fmt(calc.totalPend)} sub={calc.pendCount+" pago(s)"} accent="var(--orange)" onClick={()=>goTab("pagos")} icon="📅"/>
+        <Kpi label="Presupuesto usado" value={calc.totalPresup>0? calc.pctPresup.toFixed(0)+"%":"—"} sub={calc.totalPresup>0? fmt(calc.gastos)+" / "+fmt(calc.totalPresup):"Sin presupuesto"} accent="var(--gold)" onClick={()=>goTab("presupuestos")}/>
+        <ProxPagoCard prox={calc.prox} dias={calc.proxDias} catMap={catMap} onClick={()=>goTab("pagos")}/>
+      </div>
+
+      {/* Alertas */}
+      {(calc.vencidos.length>0 || (calc.prox && calc.proxDias<=3)) && (
+        <div className="space-y-2">
+          {calc.vencidos.length>0 && (
+            <div className="rounded-xl px-4 py-3 flex items-center gap-3 border" style={{background:"#fdeaea", borderColor:"#f5c6c6"}}>
+              <span className="text-lg">🔴</span>
+              <div className="text-sm font-semibold" style={{color:"var(--red)"}}>
+                Tenés {calc.vencidos.length} pago(s) vencido(s) por {fmt(calc.vencidos.reduce((s,o)=>s+Number(o.importe||0),0))}.
+              </div>
+              <button onClick={()=>goTab("pagos")} className="ml-auto text-xs font-bold underline" style={{color:"var(--red)"}}>Ver</button>
+            </div>
+          )}
+          {calc.prox && calc.proxDias>=0 && calc.proxDias<=3 && (
+            <div className="rounded-xl px-4 py-3 flex items-center gap-3 border" style={{background:"#fff4e6", borderColor:"#ffd9a8"}}>
+              <span className="text-lg">🟠</span>
+              <div className="text-sm font-semibold" style={{color:"var(--orange)"}}>
+                {calc.prox.nombre} vence {calc.proxDias===0?"hoy":"en "+calc.proxDias+" día(s)"} — {fmt(calc.prox.importe)}.
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Gráficos */}
+      <div className="grid lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl p-4 border" style={{borderColor:"var(--line)"}}>
+          <div className="font-bold text-[15px] mb-3" style={{color:"var(--navy)"}}>Ingresos vs Gastos · Evolución</div>
+          <ChartBox type="bar" height={240} data={{
+            labels: serie.map(s=>s.label),
+            datasets:[
+              {label:"Ingresos", data:serie.map(s=>s.ing), backgroundColor:"#2E9E6B", borderRadius:5, barPercentage:0.62},
+              {label:"Gastos", data:serie.map(s=>s.gas), backgroundColor:"#D64545", borderRadius:5, barPercentage:0.62},
+            ]
+          }}/>
+        </div>
+        <div className="bg-white rounded-2xl p-4 border" style={{borderColor:"var(--line)"}}>
+          <div className="font-bold text-[15px] mb-3" style={{color:"var(--navy)"}}>Gastos por categoría · {MESES[new Date().getMonth()]}</div>
+          {catEntries.length? (
+            <ChartBox type="doughnut" height={240} data={{
+              labels: catEntries.map(e=>e[0]),
+              datasets:[{ data: catEntries.map(e=>e[1]),
+                backgroundColor: catEntries.map(e=> (catMap[Object.keys(catMap).find(k=>catMap[k].nombre===e[0])]||{}).color || PALETTE[0]),
+                borderWidth:2, borderColor:"#fff" }]
+            }} options={{cutout:"58%", plugins:{legend:{position:"right"}}}}/>
+          ) : <Empty msg="Sin gastos este mes"/>}
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl p-4 border" style={{borderColor:"var(--line)"}}>
+          <div className="font-bold text-[15px] mb-3" style={{color:"var(--navy)"}}>Evolución del ahorro</div>
+          <ChartBox type="line" height={200} data={{
+            labels: serie.map(s=>s.label),
+            datasets:[{ label:"Ahorro", data:serie.map(s=>s.aho), borderColor:"#4A78B0",
+              backgroundColor:"rgba(74,120,176,.12)", fill:true, tension:.35, pointRadius:4, pointBackgroundColor:"#4A78B0" }]
+          }}/>
+        </div>
+
+        {/* Últimos movimientos */}
+        <div className="bg-white rounded-2xl p-4 border" style={{borderColor:"var(--line)"}}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-bold text-[15px]" style={{color:"var(--navy)"}}>Últimos movimientos</div>
+            <button onClick={()=>goTab("movimientos")} className="text-xs font-bold" style={{color:"var(--gold-dim)"}}>Ver todos →</button>
+          </div>
+          {ultimos.length? (
+            <div className="divide-y" style={{borderColor:"var(--line)"}}>
+              {ultimos.map(m=> <MovRow key={m.id} m={m} catMap={catMap} accMap={accMap} compact/>)}
+            </div>
+          ) : <Empty msg="Todavía no hay movimientos"/>}
+        </div>
+      </div>
+
+      {/* Próximos pagos */}
+      <div className="bg-white rounded-2xl p-4 border" style={{borderColor:"var(--line)"}}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="font-bold text-[15px]" style={{color:"var(--navy)"}}>Próximos pagos</div>
+          <button onClick={()=>goTab("pagos")} className="text-xs font-bold" style={{color:"var(--gold-dim)"}}>Ver todos →</button>
+        </div>
+        {proxPagos.length? (
+          <div className="space-y-2">
+            {proxPagos.map(o=> <OblRowMini key={o.id} o={o} catMap={catMap}/>)}
+          </div>
+        ) : <Empty msg="No hay pagos pendientes"/>}
+      </div>
+    </div>
+  );
+}
+
+function ProxPagoCard({prox,dias,catMap,onClick}){
+  if(!prox) return <Kpi label="Próximo pago" value="—" sub="Sin pendientes" accent="var(--gold)"/>;
+  const tone = dias<0?"red":undefined;
+  const txt = dias<0? "Vencido hace "+Math.abs(dias)+"d" : dias===0? "Vence hoy" : "En "+dias+" día(s)";
+  return (
+    <div onClick={onClick} className="bg-white rounded-2xl p-4 border relative overflow-hidden lift cursor-pointer" style={{borderColor:"var(--line)"}}>
+      <div className="absolute top-0 left-0 w-1 h-full" style={{background: dias<0?"var(--red)":dias<=3?"var(--orange)":"var(--gold)"}}></div>
+      <div className="text-[11.5px] font-bold uppercase tracking-wide pl-1.5" style={{color:"var(--gray)"}}>Próximo pago</div>
+      <div className="text-[17px] font-extrabold mt-1 pl-1.5 truncate" style={{color:"var(--navy)"}}>{prox.nombre}</div>
+      <div className="flex items-center justify-between pl-1.5 mt-0.5">
+        <span className="text-[13px] font-bold tabnum" style={{color: dias<0?"var(--red)":"var(--navy)"}}>{fmt(prox.importe)}</span>
+        <span className="text-[11px] font-semibold" style={{color: dias<0?"var(--red)":dias<=3?"var(--orange)":"var(--gray)"}}>{txt}</span>
+      </div>
+    </div>
+  );
+}
+
+function Empty({msg}){
+  return <div className="text-center py-8 text-sm" style={{color:"var(--gray)"}}>{msg}</div>;
+}
+
+// Fila de movimiento reutilizable
+function MovRow({m,catMap,accMap,compact,onEdit}){
+  const c = catMap[m.categoria_id];
+  const isIn = m.tipo==="ingreso";
+  const isTr = m.tipo==="transferencia";
+  const color = isTr? "var(--blue)" : isIn? "var(--green)" : "var(--red)";
+  const label = isTr? "Transferencia" : (c? c.nombre : "Sin categoría");
+  const dotColor = isTr? "var(--blue)" : (c? c.color : "var(--gray)");
+  return (
+    <div className={"flex items-center gap-3 py-2.5 "+(onEdit?"cursor-pointer hover:bg-gray-50 -mx-2 px-2 rounded-lg transition":"")} onClick={onEdit}>
+      <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
+           style={{background: dotColor+"22", color:dotColor}}>{isTr?"⇄":isIn?"↑":"↓"}</div>
+      <div className="min-w-0 flex-1">
+        <div className="font-semibold text-[14px] truncate" style={{color:"var(--navy)"}}>{m.descripcion|| label}</div>
+        <div className="text-[12px] truncate" style={{color:"var(--gray)"}}>
+          {label} · {fmtDate(m.fecha)}{!compact && accMap[m.cuenta_id]? " · "+accMap[m.cuenta_id].nombre : ""}
+        </div>
+      </div>
+      <div className="font-bold text-[14px] tabnum shrink-0" style={{color}}>{isIn?"+":isTr?"":"−"}{fmt(m.importe)}</div>
+    </div>
+  );
+}
+
+function OblRowMini({o,catMap}){
+  const st = statusOf(o);
+  const dias = daysBetween(o.fecha_venc, todayISO());
+  const color = st==="Vencido"?"var(--red)": dias<=3?"var(--orange)": dias<=7?"var(--yellow)":"var(--green)";
+  const dot = st==="Vencido"?"🔴": dias<=3?"🟠": dias<=7?"🟡":"🟢";
+  return (
+    <div className="flex items-center gap-3 py-1.5">
+      <span>{dot}</span>
+      <div className="min-w-0 flex-1">
+        <div className="font-semibold text-[14px] truncate" style={{color:"var(--navy)"}}>{o.nombre}</div>
+        <div className="text-[12px]" style={{color:"var(--gray)"}}>{fmtDate(o.fecha_venc)} · {o.frecuencia}</div>
+      </div>
+      <div className="text-right shrink-0">
+        <div className="font-bold text-[14px] tabnum" style={{color:"var(--navy)"}}>{fmt(o.importe)}</div>
+        <div className="text-[11px] font-semibold" style={{color}}>{st==="Vencido"?"Vencido":dias===0?"Hoy":"En "+dias+"d"}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   VISTA: MOVIMIENTOS
+   ══════════════════════════════════════════════════════════════ */
+function Movimientos({store, confirmAsk}){
+  const {movs,cats,accs} = store;
+  const toast = useToast();
+  const catMap = useMemo(()=> Object.fromEntries(cats.map(c=>[c.id,c])),[cats]);
+  const accMap = useMemo(()=> Object.fromEntries(accs.map(a=>[a.id,a])),[accs]);
+
+  const [q,setQ] = useState("");
+  const [fTipo,setFTipo] = useState("");
+  const [fCat,setFCat] = useState("");
+  const [fAcc,setFAcc] = useState("");
+  const [fMes,setFMes] = useState("");
+  const [sortBy,setSortBy] = useState("fecha");
+  const [sortDir,setSortDir] = useState("desc");
+  const [editing,setEditing] = useState(null); // obj o "new"
+  const [showFilters,setShowFilters] = useState(false);
+
+  const meses = useMemo(()=>{
+    const set = new Set(movs.map(m=>monthKey(m.fecha)));
+    return Array.from(set).sort().reverse();
+  },[movs]);
+
+  const filtered = useMemo(()=>{
+    let r = movs.filter(m=>{
+      if(fTipo && m.tipo!==fTipo) return false;
+      if(fCat && m.categoria_id!==fCat) return false;
+      if(fAcc && m.cuenta_id!==fAcc && m.cuenta_destino_id!==fAcc) return false;
+      if(fMes && monthKey(m.fecha)!==fMes) return false;
+      if(q){
+        const s=q.toLowerCase();
+        const c=catMap[m.categoria_id];
+        const hay=[m.descripcion, c?.nombre, accMap[m.cuenta_id]?.nombre, String(m.importe), m.medio_pago].filter(Boolean).join(" ").toLowerCase();
+        if(!hay.includes(s)) return false;
+      }
+      return true;
+    });
+    r.sort((a,b)=>{
+      let va,vb;
+      if(sortBy==="importe"){ va=Number(a.importe); vb=Number(b.importe); }
+      else if(sortBy==="categoria"){ va=catMap[a.categoria_id]?.nombre||""; vb=catMap[b.categoria_id]?.nombre||""; }
+      else { va=a.fecha||""; vb=b.fecha||""; }
+      const cmp = va<vb?-1:va>vb?1:0;
+      return sortDir==="asc"? cmp : -cmp;
+    });
+    return r;
+  },[movs,q,fTipo,fCat,fAcc,fMes,sortBy,sortDir,catMap,accMap]);
+
+  const totals = useMemo(()=>{
+    const ing = filtered.filter(m=>m.tipo==="ingreso").reduce((s,m)=>s+Number(m.importe||0),0);
+    const gas = filtered.filter(m=>m.tipo==="gasto").reduce((s,m)=>s+Number(m.importe||0),0);
+    return {ing,gas,count:filtered.length};
+  },[filtered]);
+
+  const save = async (data)=>{
+    try{
+      if(editing && editing!=="new"){ await store.update("mov", editing.id, data); toast("Movimiento actualizado"); }
+      else { await store.create("mov", data); toast("Movimiento registrado"); }
+      setEditing(null);
+    }catch(e){ toast("Error al guardar","err"); }
+  };
+  const dup = async (m)=>{
+    const {id, ...rest} = m;
+    await store.create("mov", {...rest, fecha: todayISO()});
+    toast("Movimiento duplicado");
+  };
+  const del = async (m)=>{
+    const ok = await confirmAsk({title:"¿Eliminar movimiento?", message:"Esta acción no se puede deshacer.", confirmText:"Eliminar", danger:true});
+    if(!ok) return;
+    try{ await store.remove("mov", m.id); toast("Movimiento eliminado"); }catch(e){ toast("Error","err"); }
+  };
+
+  const activeFilters = [fTipo,fCat,fAcc,fMes].filter(Boolean).length;
+  const setSort = (col)=>{ if(sortBy===col){ setSortDir(d=>d==="asc"?"desc":"asc"); } else { setSortBy(col); setSortDir("desc"); } };
+
+  return (
+    <div className="fade space-y-4">
+      {/* Barra superior */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[180px]">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{color:"var(--gray)"}}>🔍</span>
+          <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar por descripción, categoría, monto…"
+            className={inpCls+" pl-9"} style={{borderColor:"var(--gray2)"}}/>
+        </div>
+        <button onClick={()=>setShowFilters(s=>!s)} className="px-4 py-2.5 rounded-xl font-semibold text-sm border flex items-center gap-2 relative"
+          style={{borderColor:"var(--gray2)", color:"var(--navy)", background:"#fff"}}>
+          ⚙ Filtros {activeFilters>0 && <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[11px] font-bold flex items-center justify-center text-white" style={{background:"var(--gold)"}}>{activeFilters}</span>}
+        </button>
+        <BtnGold onClick={()=>setEditing("new")} className="whitespace-nowrap">+ Nuevo</BtnGold>
+      </div>
+
+      {showFilters && (
+        <div className="bg-white rounded-2xl p-4 border grid grid-cols-2 lg:grid-cols-4 gap-3 fade" style={{borderColor:"var(--line)"}}>
+          <Field label="Tipo">
+            <SelectInput value={fTipo} onChange={e=>setFTipo(e.target.value)}>
+              <option value="">Todos</option><option value="ingreso">Ingresos</option><option value="gasto">Gastos</option><option value="transferencia">Transferencias</option>
+            </SelectInput>
+          </Field>
+          <Field label="Categoría">
+            <SelectInput value={fCat} onChange={e=>setFCat(e.target.value)}>
+              <option value="">Todas</option>{cats.map(c=><option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </SelectInput>
+          </Field>
+          <Field label="Cuenta">
+            <SelectInput value={fAcc} onChange={e=>setFAcc(e.target.value)}>
+              <option value="">Todas</option>{accs.map(a=><option key={a.id} value={a.id}>{a.nombre}</option>)}
+            </SelectInput>
+          </Field>
+          <Field label="Mes">
+            <SelectInput value={fMes} onChange={e=>setFMes(e.target.value)}>
+              <option value="">Todos</option>{meses.map(m=><option key={m} value={m}>{MESES[Number(m.slice(5,7))-1]+" "+m.slice(0,4)}</option>)}
+            </SelectInput>
+          </Field>
+          {activeFilters>0 && <button onClick={()=>{setFTipo("");setFCat("");setFAcc("");setFMes("");}} className="col-span-2 lg:col-span-4 text-xs font-bold text-left" style={{color:"var(--red)"}}>Limpiar filtros</button>}
+        </div>
+      )}
+
+      {/* Totales del filtro */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-white rounded-xl p-3 border text-center" style={{borderColor:"var(--line)"}}>
+          <div className="text-[11px] font-bold uppercase" style={{color:"var(--gray)"}}>Ingresos</div>
+          <div className="font-extrabold tabnum" style={{color:"var(--green)"}}>{fmt(totals.ing)}</div>
+        </div>
+        <div className="bg-white rounded-xl p-3 border text-center" style={{borderColor:"var(--line)"}}>
+          <div className="text-[11px] font-bold uppercase" style={{color:"var(--gray)"}}>Gastos</div>
+          <div className="font-extrabold tabnum" style={{color:"var(--red)"}}>{fmt(totals.gas)}</div>
+        </div>
+        <div className="bg-white rounded-xl p-3 border text-center" style={{borderColor:"var(--line)"}}>
+          <div className="text-[11px] font-bold uppercase" style={{color:"var(--gray)"}}>Balance</div>
+          <div className="font-extrabold tabnum" style={{color: totals.ing-totals.gas>=0?"var(--navy)":"var(--red)"}}>{fmt(totals.ing-totals.gas)}</div>
+        </div>
+      </div>
+
+      {/* Tabla (desktop) */}
+      <div className="bg-white rounded-2xl border overflow-hidden hidden md:block" style={{borderColor:"var(--line)"}}>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left" style={{background:"var(--navy)"}}>
+              <SortTh label="Fecha" col="fecha" {...{sortBy,sortDir,setSort}}/>
+              <th className="px-4 py-3 text-white font-semibold text-[12px] uppercase">Descripción</th>
+              <SortTh label="Categoría" col="categoria" {...{sortBy,sortDir,setSort}}/>
+              <th className="px-4 py-3 text-white font-semibold text-[12px] uppercase">Cuenta</th>
+              <SortTh label="Importe" col="importe" align="right" {...{sortBy,sortDir,setSort}}/>
+              <th className="px-4 py-3 text-white font-semibold text-[12px] uppercase text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(m=>{
+              const c=catMap[m.categoria_id]; const isIn=m.tipo==="ingreso"; const isTr=m.tipo==="transferencia";
+              return (
+                <tr key={m.id} className="border-t hover:bg-gray-50 transition" style={{borderColor:"var(--line)"}}>
+                  <td className="px-4 py-2.5 tabnum whitespace-nowrap" style={{color:"var(--gray)"}}>{fmtDate(m.fecha)}</td>
+                  <td className="px-4 py-2.5 font-medium" style={{color:"var(--navy)"}}>{m.descripcion||"—"}</td>
+                  <td className="px-4 py-2.5">
+                    {isTr? <Pill bg="#e8f0f8" fg="var(--blue)">⇄ Transferencia</Pill> :
+                     <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{background:c?.color||"#ccc"}}></span>{c?.nombre||"—"}</span>}
+                  </td>
+                  <td className="px-4 py-2.5" style={{color:"var(--gray)"}}>{accMap[m.cuenta_id]?.nombre}{isTr?" → "+(accMap[m.cuenta_destino_id]?.nombre||""):""}</td>
+                  <td className="px-4 py-2.5 text-right font-bold tabnum" style={{color: isTr?"var(--blue)":isIn?"var(--green)":"var(--red)"}}>{isIn?"+":isTr?"":"−"}{fmt(m.importe)}</td>
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center justify-center gap-1">
+                      <IconBtn title="Editar" onClick={()=>setEditing(m)}>✎</IconBtn>
+                      <IconBtn title="Duplicar" onClick={()=>dup(m)}>⧉</IconBtn>
+                      <IconBtn title="Eliminar" danger onClick={()=>del(m)}>🗑</IconBtn>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {!filtered.length && <Empty msg="No hay movimientos con estos criterios"/>}
+      </div>
+
+      {/* Cards (mobile) */}
+      <div className="md:hidden space-y-2">
+        {filtered.map(m=>{
+          const c=catMap[m.categoria_id]; const isIn=m.tipo==="ingreso"; const isTr=m.tipo==="transferencia";
+          return (
+            <div key={m.id} className="bg-white rounded-xl border p-3" style={{borderColor:"var(--line)"}}>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 font-bold" style={{background:(isTr?"var(--blue)":c?.color||"#999")+"22", color:isTr?"var(--blue)":c?.color||"#999"}}>{isTr?"⇄":isIn?"↑":"↓"}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-[14px] truncate" style={{color:"var(--navy)"}}>{m.descripcion||(isTr?"Transferencia":c?.nombre||"—")}</div>
+                  <div className="text-[12px]" style={{color:"var(--gray)"}}>{fmtDate(m.fecha)} · {isTr?"Transf.":c?.nombre||"—"}</div>
+                </div>
+                <div className="font-bold text-[15px] tabnum" style={{color:isTr?"var(--blue)":isIn?"var(--green)":"var(--red)"}}>{isIn?"+":isTr?"":"−"}{fmt(m.importe)}</div>
+              </div>
+              <div className="flex gap-1 mt-2 pt-2 border-t justify-end" style={{borderColor:"var(--line)"}}>
+                <IconBtn title="Editar" onClick={()=>setEditing(m)}>✎</IconBtn>
+                <IconBtn title="Duplicar" onClick={()=>dup(m)}>⧉</IconBtn>
+                <IconBtn title="Eliminar" danger onClick={()=>del(m)}>🗑</IconBtn>
+              </div>
+            </div>
+          );
+        })}
+        {!filtered.length && <Empty msg="No hay movimientos con estos criterios"/>}
+      </div>
+
+      <Modal open={!!editing} onClose={()=>setEditing(null)} title={editing&&editing!=="new"?"Editar movimiento":"Nuevo movimiento"}>
+        {editing && <MovForm initial={editing==="new"?null:editing} cats={cats} accs={accs} onSave={save} onCancel={()=>setEditing(null)}/>}
+      </Modal>
+    </div>
+  );
+}
+
+function SortTh({label,col,align,sortBy,sortDir,setSort}){
+  const active = sortBy===col;
+  return (
+    <th className={"px-4 py-3 text-white font-semibold text-[12px] uppercase cursor-pointer select-none "+(align==="right"?"text-right":"")} onClick={()=>setSort(col)}>
+      <span className="inline-flex items-center gap-1">{label}<span style={{opacity:active?1:0.3}}>{active?(sortDir==="asc"?"▲":"▼"):"↕"}</span></span>
+    </th>
+  );
+}
+function IconBtn({children,onClick,title,danger}){
+  return <button title={title} onClick={onClick} className="w-8 h-8 rounded-lg flex items-center justify-center text-[15px] transition hover:bg-gray-100"
+    style={{color: danger?"var(--red)":"var(--gray)"}}>{children}</button>;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   VISTA: PRÓXIMOS PAGOS / OBLIGACIONES
+   ══════════════════════════════════════════════════════════════ */
+function Pagos({store, confirmAsk}){
+  const {obls,cats,accs} = store;
+  const toast = useToast();
+  const catMap = useMemo(()=> Object.fromEntries(cats.map(c=>[c.id,c])),[cats]);
+  const accMap = useMemo(()=> Object.fromEntries(accs.map(a=>[a.id,a])),[accs]);
+  const [editing,setEditing] = useState(null);
+  const [calMonth,setCalMonth] = useState(()=> new Date());
+  const [tab,setTab] = useState("lista"); // lista | calendario
+
+  const enriched = useMemo(()=> obls.map(o=>({...o, _st:statusOf(o), _dias:daysBetween(o.fecha_venc, todayISO())})),[obls]);
+  const groups = useMemo(()=>{
+    const pend = enriched.filter(o=>o._st!=="Pagado");
+    return {
+      vencidos: pend.filter(o=>o._dias<0).sort((a,b)=>a.fecha_venc.localeCompare(b.fecha_venc)),
+      hoy: pend.filter(o=>o._dias===0),
+      semana: pend.filter(o=>o._dias>0 && o._dias<=7).sort((a,b)=>a.fecha_venc.localeCompare(b.fecha_venc)),
+      mes: pend.filter(o=>o._dias>7 && o._dias<=30).sort((a,b)=>a.fecha_venc.localeCompare(b.fecha_venc)),
+      lejos: pend.filter(o=>o._dias>30).sort((a,b)=>a.fecha_venc.localeCompare(b.fecha_venc)),
+      pagados: enriched.filter(o=>o._st==="Pagado").sort((a,b)=>b.fecha_venc.localeCompare(a.fecha_venc)),
+    };
+  },[enriched]);
+
+  const kpis = useMemo(()=>{
+    const pend = enriched.filter(o=>o._st!=="Pagado");
+    const mk=monthKey();
+    const totalMes = pend.filter(o=>monthKey(o.fecha_venc)===mk).reduce((s,o)=>s+Number(o.importe||0),0);
+    const totalVenc = groups.vencidos.reduce((s,o)=>s+Number(o.importe||0),0);
+    const prox = pend.slice().sort((a,b)=>a.fecha_venc.localeCompare(b.fecha_venc))[0];
+    return {totalMes,totalVenc,vencCount:groups.vencidos.length, prox, sem7:groups.semana.length+groups.hoy.length};
+  },[enriched,groups]);
+
+  const save = async (data)=>{
+    try{
+      if(editing && editing!=="new"){ await store.update("obl", editing.id, data); toast("Pago actualizado"); }
+      else { await store.create("obl", data); toast("Pago agregado"); }
+      setEditing(null);
+    }catch(e){ toast("Error al guardar","err"); }
+  };
+  const del = async (o)=>{
+    const ok = await confirmAsk({title:"¿Eliminar pago?", message:"Se quitará de la lista de obligaciones.", confirmText:"Eliminar", danger:true});
+    if(!ok) return;
+    try{ await store.remove("obl", o.id); toast("Pago eliminado"); }catch(e){ toast("Error","err"); }
+  };
+
+  // Marcar como pagado: registra gasto + descuenta cuenta + genera siguiente si recurrente
+  const marcarPagado = async (o)=>{
+    const cuenta = accMap[o.cuenta_id];
+    const ok = await confirmAsk({
+      title:"¿Marcar como pagado?",
+      message: "Se registrará un gasto de "+fmt(o.importe)+(cuenta?" desde "+cuenta.nombre:"")+(o.frecuencia!=="Único"?" y se creará el próximo vencimiento.":"."),
+      confirmText:"Confirmar pago"
+    });
+    if(!ok) return;
+    try{
+      // 1) registrar el gasto
+      await store.create("mov", {
+        tipo:"gasto", importe:Number(o.importe), categoria_id:o.categoria_id||null,
+        cuenta_id:o.cuenta_id, cuenta_destino_id:null, medio_pago:"Débito",
+        fecha: todayISO(), descripcion:"Pago: "+o.nombre
+      });
+      // 2) marcar esta como pagada
+      await store.update("obl", o.id, {estado:"Pagado"});
+      // 3) si es recurrente, crear siguiente
+      if(o.frecuencia && o.frecuencia!=="Único"){
+        const next = nextDateByFreq(o.fecha_venc, o.frecuencia);
+        if(next){
+          const {id,_st,_dias,...rest} = o;
+          await store.create("obl", {...rest, fecha_venc:next, estado:"Pendiente"});
+        }
+      }
+      toast("Pago registrado ✓");
+    }catch(e){ toast("Error al registrar pago","err"); }
+  };
+
+  return (
+    <div className="fade space-y-4">
+      {/* KPIs de pagos */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Kpi label="Total pendiente (mes)" value={fmt(kpis.totalMes)} accent="var(--orange)" icon="📅"/>
+        <Kpi label="Vencidos" value={fmt(kpis.totalVenc)} sub={kpis.vencCount+" pago(s)"} accent="var(--red)" tone={kpis.vencCount>0?"red":undefined} icon="🔴"/>
+        <Kpi label="Vencen en 7 días" value={kpis.sem7} sub="pagos próximos" accent="var(--yellow)" icon="🟡"/>
+        <ProxPagoCard prox={kpis.prox} dias={kpis.prox?daysBetween(kpis.prox.fecha_venc,todayISO()):null} catMap={catMap} onClick={()=>{}}/>
+      </div>
+
+      {/* Tabs lista/calendario + nuevo */}
+      <div className="flex items-center gap-2">
+        <div className="flex rounded-xl border overflow-hidden" style={{borderColor:"var(--gray2)"}}>
+          <button onClick={()=>setTab("lista")} className="px-4 py-2 text-sm font-semibold transition" style={tab==="lista"?{background:"var(--navy)",color:"#fff"}:{color:"var(--gray)"}}>Lista</button>
+          <button onClick={()=>setTab("calendario")} className="px-4 py-2 text-sm font-semibold transition" style={tab==="calendario"?{background:"var(--navy)",color:"#fff"}:{color:"var(--gray)"}}>Calendario</button>
+        </div>
+        <BtnGold onClick={()=>setEditing("new")} className="ml-auto">+ Nuevo pago</BtnGold>
+      </div>
+
+      {tab==="lista" ? (
+        <div className="space-y-4">
+          <GroupBlock title="Vencidos" dot="🔴" items={groups.vencidos} {...{catMap,accMap,marcarPagado,setEditing,del}} tone="var(--red)"/>
+          <GroupBlock title="Vencen hoy" dot="🟠" items={groups.hoy} {...{catMap,accMap,marcarPagado,setEditing,del}} tone="var(--orange)"/>
+          <GroupBlock title="Próximos 7 días" dot="🟡" items={groups.semana} {...{catMap,accMap,marcarPagado,setEditing,del}} tone="var(--yellow)"/>
+          <GroupBlock title="Próximos 30 días" dot="🟢" items={groups.mes} {...{catMap,accMap,marcarPagado,setEditing,del}} tone="var(--green)"/>
+          <GroupBlock title="Más adelante" dot="⚪" items={groups.lejos} {...{catMap,accMap,marcarPagado,setEditing,del}} tone="var(--gray)"/>
+          {groups.pagados.length>0 && <GroupBlock title="Pagados" dot="✅" items={groups.pagados} paid {...{catMap,accMap,marcarPagado,setEditing,del}} tone="var(--gray)"/>}
+          {enriched.length===0 && <div className="bg-white rounded-2xl border p-8" style={{borderColor:"var(--line)"}}><Empty msg="No hay pagos cargados. Tocá “Nuevo pago” para empezar."/></div>}
+        </div>
+      ) : (
+        <Calendario month={calMonth} setMonth={setCalMonth} obls={enriched} catMap={catMap} onPick={(o)=>setEditing(o)}/>
+      )}
+
+      <Modal open={!!editing} onClose={()=>setEditing(null)} title={editing&&editing!=="new"?"Editar pago":"Nuevo pago"}>
+        {editing && <OblForm initial={editing==="new"?null:editing} cats={cats} accs={accs} onSave={save} onCancel={()=>setEditing(null)}/>}
+      </Modal>
+    </div>
+  );
+}
+
+function GroupBlock({title,dot,items,catMap,accMap,marcarPagado,setEditing,del,tone,paid}){
+  if(!items.length) return null;
+  const total = items.reduce((s,o)=>s+Number(o.importe||0),0);
+  return (
+    <div className="bg-white rounded-2xl border overflow-hidden" style={{borderColor:"var(--line)"}}>
+      <div className="flex items-center justify-between px-4 py-2.5" style={{background: tone+"12"}}>
+        <div className="font-bold text-[14px] flex items-center gap-2" style={{color:"var(--navy)"}}>{dot} {title} <span className="text-[12px] font-semibold" style={{color:"var(--gray)"}}>({items.length})</span></div>
+        <div className="font-bold tabnum text-[14px]" style={{color:tone}}>{fmt(total)}</div>
+      </div>
+      <div className="divide-y" style={{borderColor:"var(--line)"}}>
+        {items.map(o=>{
+          const c=catMap[o.categoria_id];
+          return (
+            <div key={o.id} className="flex items-center gap-3 px-4 py-3">
+              <div className="w-2 h-10 rounded-full shrink-0" style={{background:c?.color||"#ccc"}}></div>
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold text-[14px] truncate" style={{color:"var(--navy)"}}>{o.nombre}</div>
+                <div className="text-[12px]" style={{color:"var(--gray)"}}>
+                  {fmtDate(o.fecha_venc)} · {c?.nombre||"—"} · {o.frecuencia}{accMap[o.cuenta_id]?" · "+accMap[o.cuenta_id].nombre:""}
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="font-bold tabnum text-[15px]" style={{color:"var(--navy)"}}>{fmt(o.importe)}</div>
+                {!paid && <div className="text-[11px] font-semibold" style={{color:tone}}>{o._st==="Vencido"?"Vencido hace "+Math.abs(o._dias)+"d":o._dias===0?"Hoy":"En "+o._dias+"d"}</div>}
+                {paid && <div className="text-[11px] font-semibold" style={{color:"var(--green)"}}>Pagado</div>}
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                {!paid && <button onClick={()=>marcarPagado(o)} title="Marcar pagado" className="w-9 h-9 rounded-lg flex items-center justify-center text-white transition active:scale-95" style={{background:"var(--green)"}}>✓</button>}
+                <IconBtn title="Editar" onClick={()=>setEditing(o)}>✎</IconBtn>
+                <IconBtn title="Eliminar" danger onClick={()=>del(o)}>🗑</IconBtn>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Calendario mensual con marcadores de vencimiento
+function Calendario({month,setMonth,obls,catMap,onPick}){
+  const y=month.getFullYear(), m=month.getMonth();
+  const first = new Date(y,m,1);
+  const startDow = (first.getDay()+6)%7; // lunes=0
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  const byDay = {};
+  obls.forEach(o=>{
+    if(monthKey(o.fecha_venc)===first.toISOString().slice(0,7)){
+      const d = parseD(o.fecha_venc).getDate();
+      (byDay[d]=byDay[d]||[]).push(o);
+    }
+  });
+  const cells=[];
+  for(let i=0;i<startDow;i++) cells.push(null);
+  for(let d=1;d<=daysInMonth;d++) cells.push(d);
+  const todayD = todayISO()===first.toISOString().slice(0,7)+"-"+String(new Date().getDate()).padStart(2,"0")? new Date().getDate() : null;
+
+  return (
+    <div className="bg-white rounded-2xl border p-4" style={{borderColor:"var(--line)"}}>
+      <div className="flex items-center justify-between mb-4">
+        <button onClick={()=>setMonth(new Date(y,m-1,1))} className="w-9 h-9 rounded-lg hover:bg-gray-100 transition font-bold" style={{color:"var(--navy)"}}>‹</button>
+        <div className="font-bold text-[16px]" style={{color:"var(--navy)"}}>{MESES[m]} {y}</div>
+        <button onClick={()=>setMonth(new Date(y,m+1,1))} className="w-9 h-9 rounded-lg hover:bg-gray-100 transition font-bold" style={{color:"var(--navy)"}}>›</button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {["Lu","Ma","Mi","Ju","Vi","Sá","Do"].map(d=><div key={d} className="text-center text-[11px] font-bold py-1" style={{color:"var(--gray)"}}>{d}</div>)}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((d,i)=>{
+          if(!d) return <div key={i}></div>;
+          const items = byDay[d]||[];
+          const isToday = d===todayD;
+          const tot = items.reduce((s,o)=>s+Number(o.importe||0),0);
+          const hasVenc = items.some(o=>o._st==="Vencido");
+          const hasPend = items.some(o=>o._st==="Pendiente");
+          return (
+            <div key={i} className="min-h-[64px] rounded-lg border p-1.5 relative"
+              style={{borderColor: isToday?"var(--gold)":"var(--line)", background: isToday?"#fdf6e3":"#fff", borderWidth:isToday?2:1}}>
+              <div className="text-[12px] font-bold" style={{color: isToday?"var(--gold-dim)":"var(--navy)"}}>{d}</div>
+              {items.slice(0,2).map(o=>(
+                <div key={o.id} onClick={()=>onPick(o)} className="text-[9px] leading-tight mt-0.5 px-1 py-0.5 rounded cursor-pointer truncate font-semibold"
+                  style={{background:(o._st==="Vencido"?"var(--red)":o._st==="Pagado"?"var(--gray)":"var(--orange)")+"22", color:o._st==="Vencido"?"var(--red)":o._st==="Pagado"?"var(--gray)":"var(--orange)"}}>{o.nombre}</div>
+              ))}
+              {items.length>2 && <div className="text-[9px] font-bold mt-0.5" style={{color:"var(--gray)"}}>+{items.length-2} más</div>}
+              {tot>0 && <div className="text-[8.5px] font-bold mt-0.5 tabnum" style={{color:"var(--gray)"}}>{fmt(tot)}</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   VISTA: CUENTAS
+   ══════════════════════════════════════════════════════════════ */
+function Cuentas({store, confirmAsk}){
+  const {accs,movs} = store;
+  const toast = useToast();
+  const balances = useMemo(()=> computeAccountBalances(accs,movs),[accs,movs]);
+  const [editing,setEditing] = useState(null);
+  const totalPatrimonio = Object.values(balances).reduce((s,v)=>s+v,0);
+
+  const save = async (data)=>{
+    try{
+      if(editing && editing!=="new"){ await store.update("acc", editing.id, data); toast("Cuenta actualizada"); }
+      else { await store.create("acc", data); toast("Cuenta creada"); }
+      setEditing(null);
+    }catch(e){ toast("Error","err"); }
+  };
+  const del = async (a)=>{
+    const usados = movs.filter(m=>m.cuenta_id===a.id||m.cuenta_destino_id===a.id).length;
+    const ok = await confirmAsk({title:"¿Eliminar cuenta?", message: usados>0? "Hay "+usados+" movimiento(s) asociados. Se mantendrán pero perderán la referencia.":"Se eliminará la cuenta.", confirmText:"Eliminar", danger:true});
+    if(!ok) return;
+    try{ await store.remove("acc", a.id); toast("Cuenta eliminada"); }catch(e){ toast("Error","err"); }
+  };
+
+  return (
+    <div className="fade space-y-4">
+      <div className="bg-white rounded-2xl p-5 border flex items-center justify-between" style={{borderColor:"var(--line)", background:"linear-gradient(135deg,var(--navy),var(--navy2))"}}>
+        <div>
+          <div className="text-[12px] font-bold uppercase tracking-wide" style={{color:"var(--gold2)"}}>Patrimonio disponible</div>
+          <div className="text-[30px] font-extrabold text-white tabnum mt-1">{fmt(totalPatrimonio)}</div>
+          <div className="text-[12px] mt-0.5" style={{color:"#8fa3bd"}}>{accs.length} cuenta(s)</div>
+        </div>
+        <BtnGold onClick={()=>setEditing("new")}>+ Cuenta</BtnGold>
+      </div>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {accs.map(a=>{
+          const saldo = balances[a.id]||0;
+          return (
+            <div key={a.id} className="bg-white rounded-2xl border p-4 lift" style={{borderColor:"var(--line)"}}>
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-sm" style={{background:a.color}}>{a.nombre.slice(0,2).toUpperCase()}</div>
+                  <div>
+                    <div className="font-bold text-[15px]" style={{color:"var(--navy)"}}>{a.nombre}</div>
+                    <div className="text-[12px]" style={{color:"var(--gray)"}}>{a.tipo}</div>
+                  </div>
+                </div>
+                <div className="flex gap-0.5">
+                  <IconBtn title="Editar" onClick={()=>setEditing(a)}>✎</IconBtn>
+                  <IconBtn title="Eliminar" danger onClick={()=>del(a)}>🗑</IconBtn>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t" style={{borderColor:"var(--line)"}}>
+                <div className="text-[11px] font-bold uppercase" style={{color:"var(--gray)"}}>Saldo actual</div>
+                <div className="text-[22px] font-extrabold tabnum" style={{color: saldo<0?"var(--red)":"var(--navy)"}}>{fmt(saldo)}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <Modal open={!!editing} onClose={()=>setEditing(null)} title={editing&&editing!=="new"?"Editar cuenta":"Nueva cuenta"} max="max-w-md">
+        {editing && <AccForm initial={editing==="new"?null:editing} onSave={save} onCancel={()=>setEditing(null)}/>}
+      </Modal>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   VISTA: CATEGORÍAS
+   ══════════════════════════════════════════════════════════════ */
+function Categorias({store, confirmAsk}){
+  const {cats,movs} = store;
+  const toast = useToast();
+  const [editing,setEditing] = useState(null);
+  const ingresos = cats.filter(c=>c.tipo==="ingreso");
+  const gastos = cats.filter(c=>c.tipo==="gasto");
+
+  const save = async (data)=>{
+    try{
+      if(editing && editing!=="new"){ await store.update("cat", editing.id, data); toast("Categoría actualizada"); }
+      else { await store.create("cat", data); toast("Categoría creada"); }
+      setEditing(null);
+    }catch(e){ toast("Error","err"); }
+  };
+  const del = async (c)=>{
+    const usados = movs.filter(m=>m.categoria_id===c.id).length;
+    const ok = await confirmAsk({title:"¿Eliminar categoría?", message: usados>0?"Hay "+usados+" movimiento(s) con esta categoría.":"Se eliminará la categoría.", confirmText:"Eliminar", danger:true});
+    if(!ok) return;
+    try{ await store.remove("cat", c.id); toast("Categoría eliminada"); }catch(e){ toast("Error","err"); }
+  };
+
+  const Block = ({title,list,color})=>(
+    <div className="bg-white rounded-2xl border p-4" style={{borderColor:"var(--line)"}}>
+      <div className="font-bold text-[15px] mb-3 flex items-center gap-2" style={{color:"var(--navy)"}}>
+        <span className="w-3 h-3 rounded-full" style={{background:color}}></span>{title} <span className="text-[12px]" style={{color:"var(--gray)"}}>({list.length})</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {list.map(c=>(
+          <div key={c.id} className="group inline-flex items-center gap-2 pl-2.5 pr-1.5 py-1.5 rounded-full border transition hover:shadow-sm" style={{borderColor:"var(--line)"}}>
+            <span className="w-2.5 h-2.5 rounded-full" style={{background:c.color}}></span>
+            <span className="text-[13px] font-semibold" style={{color:"var(--navy)"}}>{c.nombre}</span>
+            <button onClick={()=>setEditing(c)} className="w-6 h-6 rounded-full text-[11px] hover:bg-gray-100 transition" style={{color:"var(--gray)"}}>✎</button>
+            <button onClick={()=>del(c)} className="w-6 h-6 rounded-full text-[11px] hover:bg-red-50 transition" style={{color:"var(--red)"}}>✕</button>
+          </div>
+        ))}
+        {!list.length && <span className="text-sm" style={{color:"var(--gray)"}}>Sin categorías</span>}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="fade space-y-4">
+      <div className="flex justify-end"><BtnGold onClick={()=>setEditing("new")}>+ Categoría</BtnGold></div>
+      <Block title="Ingresos" list={ingresos} color="var(--green)"/>
+      <Block title="Gastos" list={gastos} color="var(--red)"/>
+      <Modal open={!!editing} onClose={()=>setEditing(null)} title={editing&&editing!=="new"?"Editar categoría":"Nueva categoría"} max="max-w-md">
+        {editing && <CatForm initial={editing==="new"?null:editing} onSave={save} onCancel={()=>setEditing(null)}/>}
+      </Modal>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   VISTA: PRESUPUESTOS
+   ══════════════════════════════════════════════════════════════ */
+function Presupuestos({store}){
+  const {pres,cats,movs} = store;
+  const toast = useToast();
+  const [mes,setMes] = useState(monthKey());
+  const catMap = useMemo(()=> Object.fromEntries(cats.map(c=>[c.id,c])),[cats]);
+  const gastoCats = cats.filter(c=>c.tipo==="gasto");
+
+  const presMes = useMemo(()=> pres.filter(p=>p.mes===mes),[pres,mes]);
+  const gastadoPorCat = useMemo(()=>{
+    const map={};
+    movs.filter(m=>m.tipo==="gasto" && monthKey(m.fecha)===mes).forEach(m=>{ map[m.categoria_id]=(map[m.categoria_id]||0)+Number(m.importe||0); });
+    return map;
+  },[movs,mes]);
+
+  const rows = useMemo(()=> gastoCats.map(c=>{
+    const p = presMes.find(x=>x.categoria_id===c.id);
+    const monto = p? Number(p.monto)||0 : 0;
+    const gastado = gastadoPorCat[c.id]||0;
+    const pct = monto>0? (gastado/monto*100) : 0;
+    return {cat:c, presId:p?.id, monto, gastado, disp:monto-gastado, pct, hasP: !!p};
+  }),[gastoCats,presMes,gastadoPorCat]);
+
+  const totMonto = rows.reduce((s,r)=>s+r.monto,0);
+  const totGast = rows.reduce((s,r)=>s+r.gastado,0);
+
+  const setBudget = async (cat, presId, val)=>{
+    const monto = Number(val)||0;
+    try{
+      if(presId){
+        if(monto<=0){ await store.remove("pre", presId); }
+        else { await store.update("pre", presId, {monto}); }
+      } else if(monto>0){
+        await store.create("pre", {categoria_id:cat.id, mes, monto});
+      }
+    }catch(e){ toast("Error al guardar presupuesto","err"); }
+  };
+
+  const [meses,setMeses] = useState(()=>{
+    const arr=[]; const now=new Date();
+    for(let i=-1;i<6;i++){ const d=new Date(now.getFullYear(),now.getMonth()+i,1); arr.push(d.toISOString().slice(0,7)); }
+    return arr;
+  });
+
+  return (
+    <div className="fade space-y-4">
+      <div className="flex items-center gap-3 flex-wrap">
+        <Field label="Mes" className="w-48">
+          <SelectInput value={mes} onChange={e=>setMes(e.target.value)}>
+            {meses.map(m=><option key={m} value={m}>{MESES[Number(m.slice(5,7))-1]+" "+m.slice(0,4)}</option>)}
+          </SelectInput>
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <Kpi label="Presupuestado" value={fmt(totMonto)} accent="var(--gold)"/>
+        <Kpi label="Gastado" value={fmt(totGast)} accent="var(--red)" tone={totGast>totMonto&&totMonto>0?"red":undefined}/>
+        <Kpi label="Disponible" value={fmt(totMonto-totGast)} accent="var(--green)" tone={totMonto-totGast<0?"red":"green"}/>
+      </div>
+
+      <div className="bg-white rounded-2xl border p-4 space-y-3" style={{borderColor:"var(--line)"}}>
+        <div className="text-[13px] font-semibold" style={{color:"var(--gray)"}}>Definí un tope mensual por categoría. Se compara automáticamente con lo gastado.</div>
+        {rows.map(r=>(
+          <div key={r.cat.id} className="flex items-center gap-3 py-1">
+            <span className="w-3 h-3 rounded-full shrink-0" style={{background:r.cat.color}}></span>
+            <div className="w-32 sm:w-40 shrink-0 font-semibold text-[14px] truncate" style={{color:"var(--navy)"}}>{r.cat.nombre}</div>
+            <div className="flex-1 min-w-0">
+              {r.monto>0 ? (
+                <div>
+                  <div className="flex items-center justify-between text-[12px] mb-1">
+                    <span style={{color:"var(--gray)"}}>{fmt(r.gastado)} de {fmt(r.monto)}</span>
+                    <span className="font-bold" style={{color: r.pct>=100?"var(--red)":r.pct>=80?"var(--orange)":"var(--green)"}}>{r.pct.toFixed(0)}%{r.pct>=100?" ⚠":""}</span>
+                  </div>
+                  <Progress pct={r.pct} color={r.cat.color}/>
+                </div>
+              ) : <div className="text-[12px]" style={{color:"var(--gray)"}}>Sin presupuesto</div>}
+            </div>
+            <div className="w-28 shrink-0">
+              <NumInput defaultValue={r.monto||""} placeholder="0" onBlur={e=>setBudget(r.cat, r.presId, e.target.value)}/>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   VISTA: REPORTES (export Excel / PDF)
+   ══════════════════════════════════════════════════════════════ */
+function Reportes({store}){
+  const {movs,cats,accs} = store;
+  const toast = useToast();
+  const catMap = useMemo(()=> Object.fromEntries(cats.map(c=>[c.id,c])),[cats]);
+  const accMap = useMemo(()=> Object.fromEntries(accs.map(a=>[a.id,a])),[accs]);
+
+  const [rango,setRango] = useState("mes"); // semana | mes | anio | custom
+  const [desde,setDesde] = useState(monthKey()+"-01");
+  const [hasta,setHasta] = useState(todayISO());
+
+  const range = useMemo(()=>{
+    const now = new Date();
+    if(rango==="semana"){ const d=new Date(now); d.setDate(d.getDate()-6); return {d:d.toISOString().slice(0,10), h:todayISO(), label:"Últimos 7 días"}; }
+    if(rango==="mes"){ const d=new Date(now.getFullYear(),now.getMonth(),1); return {d:d.toISOString().slice(0,10), h:todayISO(), label:MESES[now.getMonth()]+" "+now.getFullYear()}; }
+    if(rango==="anio"){ return {d:now.getFullYear()+"-01-01", h:todayISO(), label:"Año "+now.getFullYear()}; }
+    return {d:desde, h:hasta, label:fmtDate(desde)+" → "+fmtDate(hasta)};
+  },[rango,desde,hasta]);
+
+  const data = useMemo(()=>{
+    const inRange = movs.filter(m=> m.fecha>=range.d && m.fecha<=range.h);
+    const ing = inRange.filter(m=>m.tipo==="ingreso").reduce((s,m)=>s+Number(m.importe||0),0);
+    const gas = inRange.filter(m=>m.tipo==="gasto").reduce((s,m)=>s+Number(m.importe||0),0);
+    const byCat={};
+    inRange.filter(m=>m.tipo==="gasto").forEach(m=>{ const c=catMap[m.categoria_id]; const k=c?c.nombre:"Sin categoría"; byCat[k]=(byCat[k]||0)+Number(m.importe||0); });
+    const byIngCat={};
+    inRange.filter(m=>m.tipo==="ingreso").forEach(m=>{ const c=catMap[m.categoria_id]; const k=c?c.nombre:"Sin categoría"; byIngCat[k]=(byIngCat[k]||0)+Number(m.importe||0); });
+    const nMonths = Math.max(1, (parseD(range.h).getFullYear()-parseD(range.d).getFullYear())*12 + (parseD(range.h).getMonth()-parseD(range.d).getMonth())+1);
+    return {inRange, ing, gas, ahorro:ing-gas, byCat, byIngCat, promGasto:gas/nMonths, promIng:ing/nMonths};
+  },[movs,range,catMap]);
+
+  const catEntries = Object.entries(data.byCat).sort((a,b)=>b[1]-a[1]);
+
+  const exportExcel = ()=>{
+    const wb = XLSX.utils.book_new();
+    const rows = data.inRange.map(m=>({
+      Fecha: fmtDate(m.fecha),
+      Tipo: m.tipo, 
+      Categoria: m.tipo==="transferencia"?"Transferencia":(catMap[m.categoria_id]?.nombre||"—"),
+      Cuenta: accMap[m.cuenta_id]?.nombre||"", 
+      "Cuenta destino": accMap[m.cuenta_destino_id]?.nombre||"",
+      "Medio de pago": m.medio_pago||"", 
+      Descripcion: m.descripcion||"", 
+      Importe: Number(m.importe||0)
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"]=[{wch:12},{wch:14},{wch:18},{wch:16},{wch:16},{wch:16},{wch:26},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, ws, "Movimientos");
+    // Resumen
+    const resumen = [
+      ["RESUMEN","",""],["Rango", range.label,""],["",""],
+      ["Ingresos", data.ing],["Gastos", data.gas],["Ahorro", data.ahorro],["",""],
+      ["GASTOS POR CATEGORÍA",""], ...catEntries.map(e=>[e[0], e[1]])
+    ];
+    const ws2 = XLSX.utils.aoa_to_sheet(resumen);
+    ws2["!cols"]=[{wch:26},{wch:16}];
+    XLSX.utils.book_append_sheet(wb, ws2, "Resumen");
+    XLSX.writeFile(wb, "Finanzas_"+range.d+"_"+range.h+".xlsx");
+    toast("Excel generado");
+  };
+
+  const exportPDF = ()=>{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFillColor(10,22,40); doc.rect(0,0,210,26,"F");
+    doc.setTextColor(201,168,76); doc.setFontSize(18); doc.setFont(undefined,"bold");
+    doc.text("Reporte Financiero", 14, 13);
+    doc.setTextColor(220,220,220); doc.setFontSize(9); doc.setFont(undefined,"normal");
+    doc.text(range.label+"  ·  Generado "+new Date().toLocaleDateString("es-AR"), 14, 20);
+    // KPIs
+    let y=36;
+    const box=(x,label,val,color)=>{
+      doc.setFillColor(247,248,250); doc.roundedRect(x,y,60,20,2,2,"F");
+      doc.setTextColor(138,151,168); doc.setFontSize(8); doc.text(label, x+4, y+7);
+      doc.setTextColor(...color); doc.setFontSize(13); doc.setFont(undefined,"bold");
+      doc.text(fmt(val), x+4, y+15); doc.setFont(undefined,"normal");
+    };
+    box(14,"INGRESOS",data.ing,[46,158,107]);
+    box(76,"GASTOS",data.gas,[214,69,69]);
+    box(138,"AHORRO",data.ahorro,[10,22,40]);
+    y+=30;
+    // Gastos por categoría
+    doc.setTextColor(10,22,40); doc.setFontSize(12); doc.setFont(undefined,"bold");
+    doc.text("Gastos por categoría", 14, y); y+=3;
+    doc.autoTable({
+      startY:y, styles:{fontSize:9}, headStyles:{fillColor:[10,22,40]},
+      head:[["Categoría","Importe","% del total"]],
+      body: catEntries.map(e=>[e[0], fmt(e[1]), data.gas>0?(e[1]/data.gas*100).toFixed(1)+"%":"0%"])
+    });
+    // Detalle movimientos
+    doc.autoTable({
+      startY: doc.lastAutoTable.finalY+8, styles:{fontSize:7.5}, headStyles:{fillColor:[201,168,76], textColor:[10,22,40]},
+      head:[["Fecha","Tipo","Categoría","Cuenta","Descripción","Importe"]],
+      body: data.inRange.map(m=>[
+        fmtDate(m.fecha), m.tipo, m.tipo==="transferencia"?"Transf.":(catMap[m.categoria_id]?.nombre||"—"),
+        accMap[m.cuenta_id]?.nombre||"", (m.descripcion||"").slice(0,30), (m.tipo==="ingreso"?"+":m.tipo==="gasto"?"−":"")+fmt(m.importe)
+      ])
+    });
+    doc.save("Finanzas_"+range.d+"_"+range.h+".pdf");
+    toast("PDF generado");
+  };
+
+  return (
+    <div className="fade space-y-4">
+      <div className="bg-white rounded-2xl border p-4" style={{borderColor:"var(--line)"}}>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex rounded-xl border overflow-hidden" style={{borderColor:"var(--gray2)"}}>
+            {[["semana","Semana"],["mes","Mes"],["anio","Año"],["custom","Personalizado"]].map(([k,l])=>(
+              <button key={k} onClick={()=>setRango(k)} className="px-3.5 py-2 text-sm font-semibold transition" style={rango===k?{background:"var(--navy)",color:"#fff"}:{color:"var(--gray)"}}>{l}</button>
+            ))}
+          </div>
+          {rango==="custom" && (
+            <>
+              <Field label="Desde"><input type="date" value={desde} onChange={e=>setDesde(e.target.value)} className={inpCls} style={{borderColor:"var(--gray2)"}}/></Field>
+              <Field label="Hasta"><input type="date" value={hasta} onChange={e=>setHasta(e.target.value)} className={inpCls} style={{borderColor:"var(--gray2)"}}/></Field>
+            </>
+          )}
+          <div className="ml-auto flex gap-2">
+            <button onClick={exportExcel} className="px-4 py-2.5 rounded-xl font-semibold text-sm text-white transition active:scale-95" style={{background:"var(--green)"}}>📊 Excel</button>
+            <button onClick={exportPDF} className="px-4 py-2.5 rounded-xl font-semibold text-sm text-white transition active:scale-95" style={{background:"var(--red)"}}>📄 PDF</button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <Kpi label="Ingresos" value={fmt(data.ing)} accent="var(--green)"/>
+        <Kpi label="Gastos" value={fmt(data.gas)} accent="var(--red)"/>
+        <Kpi label="Ahorro" value={fmt(data.ahorro)} accent="var(--blue)" tone={data.ahorro<0?"red":"green"}/>
+        <Kpi label="Gasto promedio/mes" value={fmt(data.promGasto)} accent="var(--orange)"/>
+        <Kpi label="Ingreso promedio/mes" value={fmt(data.promIng)} accent="var(--gold)"/>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl p-4 border" style={{borderColor:"var(--line)"}}>
+          <div className="font-bold text-[15px] mb-3" style={{color:"var(--navy)"}}>Gastos por categoría</div>
+          {catEntries.length? (
+            <ChartBox type="bar" height={Math.max(200, catEntries.length*34)} data={{
+              labels: catEntries.map(e=>e[0]),
+              datasets:[{ data:catEntries.map(e=>e[1]), backgroundColor:catEntries.map((e,i)=>PALETTE[i%PALETTE.length]), borderRadius:5 }]
+            }} options={{indexAxis:"y", plugins:{legend:{display:false}}, scales:{x:{ticks:{callback:v=>"$"+Number(v).toLocaleString("es-AR")}}}}}/>
+          ) : <Empty msg="Sin datos en el rango"/>}
+        </div>
+        <div className="bg-white rounded-2xl p-4 border" style={{borderColor:"var(--line)"}}>
+          <div className="font-bold text-[15px] mb-3" style={{color:"var(--navy)"}}>Distribución de gastos</div>
+          {catEntries.length? (
+            <ChartBox type="doughnut" height={Math.max(200, catEntries.length*34)} data={{
+              labels: catEntries.map(e=>e[0]),
+              datasets:[{ data:catEntries.map(e=>e[1]), backgroundColor:catEntries.map((e,i)=>PALETTE[i%PALETTE.length]), borderWidth:2, borderColor:"#fff" }]
+            }} options={{cutout:"55%", plugins:{legend:{position:"right"}}}}/>
+          ) : <Empty msg="Sin datos en el rango"/>}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border overflow-hidden" style={{borderColor:"var(--line)"}}>
+        <div className="px-4 py-3 font-bold text-[15px] border-b" style={{color:"var(--navy)", borderColor:"var(--line)"}}>Detalle de movimientos ({data.inRange.length})</div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead><tr style={{background:"#f7f8fa"}}>
+              {["Fecha","Categoría","Cuenta","Descripción","Importe"].map(h=><th key={h} className={"px-4 py-2.5 text-[12px] font-bold uppercase text-left "+(h==="Importe"?"text-right":"")} style={{color:"var(--gray)"}}>{h}</th>)}
+            </tr></thead>
+            <tbody>
+              {data.inRange.slice(0,50).map(m=>{ const isIn=m.tipo==="ingreso"; const isTr=m.tipo==="transferencia"; const c=catMap[m.categoria_id];
+                return (<tr key={m.id} className="border-t" style={{borderColor:"var(--line)"}}>
+                  <td className="px-4 py-2 tabnum" style={{color:"var(--gray)"}}>{fmtDate(m.fecha)}</td>
+                  <td className="px-4 py-2" style={{color:"var(--navy)"}}>{isTr?"Transferencia":c?.nombre||"—"}</td>
+                  <td className="px-4 py-2" style={{color:"var(--gray)"}}>{accMap[m.cuenta_id]?.nombre}</td>
+                  <td className="px-4 py-2" style={{color:"var(--navy)"}}>{m.descripcion||"—"}</td>
+                  <td className="px-4 py-2 text-right font-bold tabnum" style={{color:isTr?"var(--blue)":isIn?"var(--green)":"var(--red)"}}>{isIn?"+":isTr?"":"−"}{fmt(m.importe)}</td>
+                </tr>);
+              })}
+            </tbody>
+          </table>
+          {data.inRange.length>50 && <div className="px-4 py-2 text-[12px] text-center" style={{color:"var(--gray)"}}>Mostrando 50 de {data.inRange.length}. Exportá para ver el detalle completo.</div>}
+          {!data.inRange.length && <Empty msg="Sin movimientos en el rango seleccionado"/>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LOGIN (simple, patrón mini apps RDL)
+   ══════════════════════════════════════════════════════════════ */
+function Login({onLogin}){
+  const [pin,setPin] = useState("");
+  const [err,setErr] = useState(false);
+  const submit = ()=>{
+    // Login simple local. Cambiá "1234" por tu clave.
+    if(pin==="1234"){ onLogin(); }   // ← cambiá "1234" por tu clave (dejá las comillas)
+    else { setErr(true); setTimeout(()=>setErr(false),1500); }
+  };
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4" style={{background:"linear-gradient(160deg,var(--navy) 0%,var(--navy2) 60%,#16294a 100%)"}}>
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-1 mb-3">
+            <span className="text-[44px] font-extrabold tracking-tight text-white" style={{letterSpacing:"2px"}}>RDL</span>
+          </div>
+          <div className="text-[13px] font-semibold tracking-[3px]" style={{color:"var(--gold)"}}>FINANZAS PERSONALES</div>
+          <div className="text-[11px] mt-1 tracking-widest" style={{color:"#6f84a0"}}>REPORTING · DATA · LIGHTING</div>
+        </div>
+        <div className="bg-white rounded-2xl p-6 shadow-2xl">
+          <div className="text-center font-bold text-[16px] mb-1" style={{color:"var(--navy)"}}>Ingresá tu clave</div>
+          <div className="text-center text-[13px] mb-5" style={{color:"var(--gray)"}}>Accedé a tu tablero financiero</div>
+          <input type="password" inputMode="numeric" value={pin} autoFocus
+            onChange={e=>setPin(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}
+            placeholder="••••" maxLength={12}
+            className={"w-full text-center text-2xl tracking-[8px] tabnum px-4 py-3 rounded-xl border-2 outline-none transition mb-3 "+(err?"animate-pulse":"")}
+            style={{borderColor: err?"var(--red)":"var(--gray2)"}}/>
+          {err && <div className="text-center text-[13px] font-semibold mb-3" style={{color:"var(--red)"}}>Clave incorrecta</div>}
+          <BtnGold onClick={submit} className="w-full text-[15px]">Ingresar</BtnGold>
+        </div>
+        <div className="text-center text-[11px] mt-5" style={{color:"#5f748f"}}>Tu información es privada y sincronizada de forma segura.</div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   APP SHELL
+   ══════════════════════════════════════════════════════════════ */
+const NAV = [
+  {k:"dashboard", label:"Inicio", icon:"⌂"},
+  {k:"movimientos", label:"Movimientos", icon:"⇅"},
+  {k:"pagos", label:"Pagos", icon:"📅"},
+  {k:"presupuestos", label:"Presupuestos", icon:"◑"},
+  {k:"cuentas", label:"Cuentas", icon:"▦"},
+  {k:"categorias", label:"Categorías", icon:"◈"},
+  {k:"reportes", label:"Reportes", icon:"▤"},
+];
+
+function App(){
+  const [authed,setAuthed] = useState(()=> sessionStorage.getItem("rdl_fin_auth")==="1");
+  const [tab,setTab] = useState("dashboard");
+  const [quickAdd,setQuickAdd] = useState(false);
+  const store = useStore();
+  const toast = useToast();
+  const [confirmAsk, confirmNode] = useConfirm();
+
+  useEffect(()=>{ if(authed) sessionStorage.setItem("rdl_fin_auth","1"); },[authed]);
+
+  const quickSave = async (data)=>{
+    try{ await store.create("mov", data); toast("Movimiento registrado"); setQuickAdd(false); }
+    catch(e){ toast("Error al guardar","err"); }
+  };
+
+  if(!authed) return <Login onLogin={()=>setAuthed(true)}/>;
+
+  if(store.loading) return (
+    <div className="min-h-screen flex flex-col items-center justify-center" style={{background:"var(--paper)"}}>
+      <div className="w-12 h-12 rounded-full border-4 border-t-transparent animate-spin" style={{borderColor:"var(--gold)", borderTopColor:"transparent"}}></div>
+      <div className="mt-4 text-sm font-semibold" style={{color:"var(--gray)"}}>Cargando tus finanzas…</div>
+    </div>
+  );
+
+  const current = NAV.find(n=>n.k===tab);
+
+  return (
+    <div className="min-h-screen pb-24 sm:pb-8" style={{background:"var(--paper)"}}>
+      {/* Header */}
+      <header className="sticky top-0 z-40 px-4 sm:px-6 py-3 flex items-center gap-3" style={{background:"var(--navy)"}}>
+        <div className="flex items-center gap-2 cursor-pointer" onClick={()=>setTab("dashboard")}>
+          <span className="text-[22px] font-extrabold text-white tracking-tight">RDL</span>
+          <span className="text-[11px] font-bold hidden sm:block tracking-[2px] pt-1" style={{color:"var(--gold)"}}>FINANZAS</span>
+        </div>
+        {/* Nav desktop */}
+        <nav className="hidden sm:flex items-center gap-1 ml-4 flex-1">
+          {NAV.map(n=>(
+            <button key={n.k} onClick={()=>setTab(n.k)}
+              className="px-3 py-1.5 rounded-lg text-[13px] font-semibold transition"
+              style={ tab===n.k ? {background:"var(--gold)", color:"var(--navy)"} : {color:"#a9bad0"} }>
+              {n.label}
+            </button>
+          ))}
+        </nav>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="hidden sm:flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{background: store.online?"#12351f":"#3a2e12", color: store.online?"#4ade80":"var(--gold2)"}}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{background: store.online?"#4ade80":"var(--gold2)"}}></span>
+            {store.online?"Sincronizado":"Local"}
+          </span>
+          <button onClick={()=>{ setAuthed(false); sessionStorage.removeItem("rdl_fin_auth"); }} title="Salir"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-white/70 hover:bg-white/10 transition">⏻</button>
+        </div>
+      </header>
+
+      {/* Título de sección (mobile) */}
+      <div className="sm:hidden px-4 pt-4 pb-1">
+        <h1 className="text-[20px] font-extrabold" style={{color:"var(--navy)"}}>{current?.label}</h1>
+      </div>
+
+      {/* Contenido */}
+      <main className="px-4 sm:px-6 py-4 max-w-7xl mx-auto">
+        {tab==="dashboard" && <Dashboard store={store} onQuickAdd={()=>setQuickAdd(true)} goTab={setTab}/>}
+        {tab==="movimientos" && <Movimientos store={store} confirmAsk={confirmAsk}/>}
+        {tab==="pagos" && <Pagos store={store} confirmAsk={confirmAsk}/>}
+        {tab==="presupuestos" && <Presupuestos store={store}/>}
+        {tab==="cuentas" && <Cuentas store={store} confirmAsk={confirmAsk}/>}
+        {tab==="categorias" && <Categorias store={store} confirmAsk={confirmAsk}/>}
+        {tab==="reportes" && <Reportes store={store}/>}
+      </main>
+
+      {/* FAB flotante */}
+      <button onClick={()=>setQuickAdd(true)}
+        className="fixed z-50 bottom-[88px] sm:bottom-8 right-5 w-14 h-14 rounded-full flex items-center justify-center text-3xl font-light fab-sh active:scale-90 transition"
+        style={{background:"var(--gold)", color:"var(--navy)"}}>+</button>
+
+      {/* Bottom nav (mobile) */}
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 flex justify-around items-center px-1 py-2 border-t"
+        style={{background:"#fff", borderColor:"var(--line)", boxShadow:"0 -2px 12px rgba(10,22,40,.06)"}}>
+        {NAV.filter(n=>["dashboard","movimientos","pagos","presupuestos","reportes"].includes(n.k)).map(n=>(
+          <button key={n.k} onClick={()=>setTab(n.k)} className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition flex-1"
+            style={{color: tab===n.k?"var(--gold-dim)":"var(--gray)"}}>
+            <span className="text-[18px]">{n.icon}</span>
+            <span className="text-[10px] font-bold">{n.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      {/* Quick add */}
+      <Modal open={quickAdd} onClose={()=>setQuickAdd(false)} title="Registro rápido">
+        {quickAdd && <MovForm cats={store.cats} accs={store.accs} onSave={quickSave} onCancel={()=>setQuickAdd(false)}/>}
+      </Modal>
+
+      {confirmNode}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MONTAJE + PWA
+   ══════════════════════════════════════════════════════════════ */
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<ToastHost><App/></ToastHost>);
+
+// Registrar service worker inline para PWA instalable + funcionamiento offline básico
+if("serviceWorker" in navigator){
+  const swCode = `
+    const CACHE="rdl-fin-v1";
+    self.addEventListener("install",e=>{self.skipWaiting()});
+    self.addEventListener("activate",e=>{e.waitUntil(clients.claim())});
+    self.addEventListener("fetch",e=>{
+      const u=e.request.url;
+      if(u.includes("supabase")||e.request.method!=="GET"){return}
+      e.respondWith(
+        caches.open(CACHE).then(c=>c.match(e.request).then(r=> r || fetch(e.request).then(resp=>{
+          if(resp.ok && (u.startsWith("http"))) c.put(e.request, resp.clone()); return resp;
+        }).catch(()=>r)))
+      );
+    });
+  `;
+  const blob = new Blob([swCode],{type:"text/javascript"});
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+}
+</script>
+</body>
+</html>
