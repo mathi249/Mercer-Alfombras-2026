@@ -1,0 +1,56 @@
+name: Keep Alive
+
+on:
+  schedule:
+    - cron: "0 */12 * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping a la app (Vercel)
+        run: |
+          echo "== Ping a la app publicada =="
+          ok=0
+          for intento in 1 2 3; do
+            echo "Intento $intento..."
+            code=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 20 -L "${{ secrets.APP_URL }}" || echo "000")
+            echo "  Codigo HTTP: $code"
+            if [ "$code" = "200" ]; then ok=1; break; fi
+            echo "  Fallo, reintentando en 10s..."
+            sleep 10
+          done
+          if [ "$ok" = "1" ]; then
+            echo "OK: la app respondio correctamente."
+          else
+            echo "AVISO: la app no respondio 200 tras 3 intentos."
+          fi
+
+      - name: Ping a Supabase (mantener base activa)
+        run: |
+          echo "== Ping a Supabase =="
+          ok=0
+          for intento in 1 2 3; do
+            echo "Intento $intento..."
+            code=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 20 \
+              "${{ secrets.SUPABASE_URL }}/rest/v1/alfombras?select=id&limit=1" \
+              -H "apikey: ${{ secrets.SUPABASE_KEY }}" || echo "000")
+            echo "  Codigo HTTP: $code"
+            if [ "$code" = "200" ]; then ok=1; break; fi
+            echo "  Fallo, reintentando en 10s..."
+            sleep 10
+          done
+          if [ "$ok" = "1" ]; then
+            echo "OK: Supabase respondio correctamente. Base activa."
+          else
+            echo "ERROR: Supabase no respondio tras 3 intentos."
+            exit 1
+          fi
+
+      - name: Resumen
+        if: always()
+        run: echo "Keep-Alive finalizado el $(date -u) UTC"
