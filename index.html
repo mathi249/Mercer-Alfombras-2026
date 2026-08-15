@@ -58,6 +58,7 @@ const TABLE  = "alfombras";
 const TABLE_V = "ventas";
 const TABLE_LOGS = "logs";
 const TABLE_AYUDA = "ayuda";
+const TABLE_CLIENTES = "clientes";
 const TABLE_MOV = "movimientos_stock";
 
 // Normaliza texto de ubicación/cliente: quita espacios de los extremos y colapsa
@@ -508,6 +509,7 @@ function lsKey(table){
   if(table===TABLE_LOGS) return "mercer_logs";
   if(table===TABLE_AYUDA) return "mercer_ayuda";
   if(table===TABLE_MOV) return "mercer_movimientos";
+  if(table===TABLE_CLIENTES) return "mercer_clientes";
   return LS_STOCK;
 }
 function readLS(table){ return JSON.parse(localStorage.getItem(lsKey(table))||"[]"); }
@@ -941,7 +943,7 @@ function Dashboard({rows:rowsAll}){
 /* ============================================================
    TABLA
    ============================================================ */
-function Table({rows,role,isSuper,onEdit,onDelete,onStock}){
+function Table({rows,role,isSuper,onEdit,onDelete,onStock,onTraspaso}){
   const [q,setQ]=useState(""); const [qc,setQc]=useState("");
   const [fc,setFc]=useState(""); const [fm,setFm]=useState(""); const [fy,setFy]=useState("");
   const [fu,setFu]=useState(""); // filtro Ubicación (cliente)
@@ -1041,8 +1043,10 @@ function Table({rows,role,isSuper,onEdit,onDelete,onStock}){
                 <td className="px-3 py-2 text-right whitespace-nowrap">
                   {role==="admin" ? (
                     <>
-                      <button onClick={()=>onEdit(r)} className="text-sand-600 hover:text-ink px-1">✏️</button>
-                      <button onClick={()=>onDelete(r)} className="text-red-500 hover:text-red-700 px-1">🗑️</button>
+                      <button onClick={()=>onEdit(r)} className="text-sand-600 hover:text-ink px-1" title="Editar">✏️</button>
+                      {onTraspaso && normUbic(r.contenedor).toUpperCase()!==CONSIGNACION && (Number(r.stock)||0)>0 &&
+                        <button onClick={()=>onTraspaso(r)} className="text-purple-600 hover:text-purple-800 px-1" title="Pasar a Consignación">➡️</button>}
+                      <button onClick={()=>onDelete(r)} className="text-red-500 hover:text-red-700 px-1" title="Eliminar">🗑️</button>
                     </>
                   ) : <span className="text-sand-400 text-xs">solo lectura</span>}
                 </td>
@@ -1131,7 +1135,7 @@ function Reports({rows:rowsAll}){
 const VENTA_EMPTY = { fecha:new Date().toISOString().slice(0,10), contenedor_origen:"", ubicacion_origen:"", producto:"", producto_id:null, modelo:"", color:"", medida:"", cantidad:1, precio_unitario:0, importe_total:0, cliente:"", telefono:"", vendedora:"", estado:"Cobrada y entregada", condicion:"Minorista", facturacion:"Sin Factura", costo_unitario:0, canje:false, observaciones:"" };
 
 // Estados de la operación
-const ESTADOS_VENTA = ["Cobrada y entregada","Cobrada y falta entregar","Entregada y falta cobrar"];
+const ESTADOS_VENTA = ["Cobrada y entregada","Cobrada y falta entregar","Entregada y falta cobrar","No entregada y no cobrada"];
 // Condiciones de venta. El descuento se aplica automáticamente sobre el precio unitario.
 // "Consignación": se registra la venta pero NO descuenta stock (la mercadería sigue en poder del cliente).
 const CONDICIONES = [
@@ -1169,7 +1173,195 @@ function calcVenta(f){
 
 // Formulario para EDITAR una venta existente (una sola venta, todos los campos).
 // Muestra un resumen con los campos modificados en negrita antes de guardar.
-function VentaEditForm({venta,onSave,onClose,productos}){
+// Selector/buscador de cliente con autocompletado y opción de agregar nuevo.
+// Reutilizable en registrar y editar venta. Al elegir un cliente, autocompleta el teléfono.
+// Solapa Clientes: listado con nombre y teléfono, búsqueda, y alta/edición/baja.
+// El botón "Agregar cliente" existe SOLO en esta solapa.
+// Modal para traspasar unidades de un producto (desde su contenedor) a Consignación.
+// Pide cantidad (1..stock) y cliente. Conserva el stock total (mueve, no crea).
+function TraspasoModal({producto,clientes,onAddCliente,onClose,onConfirm}){
+  const disp=Number(producto.stock)||0;
+  const [cant,setCant]=useState(1);
+  const [cliente,setCliente]=useState("");
+  const [telefono,setTelefono]=useState("");
+  const [err,setErr]=useState("");
+  const inp=FieldInp;
+  const confirmar=()=>{
+    const n=Number(cant)||0;
+    if(n<=0){ setErr("La cantidad debe ser mayor a 0."); return; }
+    if(n>disp){ setErr(`No podés pasar más de ${disp} unidad(es).`); return; }
+    if(!normUbic(cliente) || normUbic(cliente)==="Depósito"){ setErr("Elegí el cliente de la consignación."); return; }
+    onConfirm(n, cliente);
+  };
+  return (
+    <Modal title="Pasar a Consignación" onClose={onClose} noBackdropClose={true}>
+      {err && <div className="text-red-600 text-sm mb-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</div>}
+      <div className="bg-sand-50 rounded-xl p-3 mb-4 text-sm">
+        <div className="font-medium text-ink">{producto.nombre}</div>
+        <div className="text-sand-600 text-xs mt-0.5">{producto.codigo} · {producto.contenedor} · Cantidad disponible: <b>{disp}</b></div>
+      </div>
+      <div className="space-y-4">
+        <Field label={`¿Cuántas unidades querés pasar a Consignación? (1 a ${disp})`}>
+          <input type="number" min="1" max={disp} className={inp} value={cant} onChange={e=>setCant(e.target.value)} autoFocus/>
+        </Field>
+        <Field label="Cliente de la consignación *">
+          <ClienteSelect clientes={clientes} valorCliente={cliente} valorTelefono={telefono} onChange={({cliente,telefono})=>{ setCliente(cliente); setTelefono(telefono); }} onAddCliente={onAddCliente} inp={inp}/>
+        </Field>
+      </div>
+      <div className="bg-sand-100 rounded-lg px-3 py-2 mt-4 text-xs text-sand-600">
+        Quedan <b>{Math.max(0,disp-(Number(cant)||0))}</b> en {producto.contenedor} · pasan <b>{Number(cant)||0}</b> a Consignación. El stock total no cambia.
+      </div>
+      <div className="flex gap-3 mt-6 justify-end">
+        <button onClick={onClose} className="px-5 py-2.5 rounded-xl border border-sand-300 text-sand-700 hover:bg-sand-100">Cancelar</button>
+        <button onClick={confirmar} className="px-6 py-2.5 rounded-xl bg-ink text-white hover:bg-sand-900 font-semibold">Confirmar traspaso</button>
+      </div>
+    </Modal>
+  );
+}
+
+
+function ClientesPanel({clientes,onAdd,onUpdate,onDelete}){
+  const [q,setQ]=useState("");
+  const [showForm,setShowForm]=useState(false);
+  const [editando,setEditando]=useState(null);
+  const [nombre,setNombre]=useState("");
+  const [telefono,setTelefono]=useState("");
+  const [confirmDel,setConfirmDel]=useState(null);
+  const [page,setPage]=useState(1); const perPage=15;
+  const inp=FieldInp;
+
+  const filtrados=(clientes||[]).filter(c=>{
+    const t=q.toLowerCase();
+    return !t || normUbic(c.nombre).toLowerCase().includes(t) || (c.telefono||"").toLowerCase().includes(t);
+  }).sort((a,b)=>normUbic(a.nombre).localeCompare(normUbic(b.nombre)));
+  const pages=Math.max(1,Math.ceil(filtrados.length/perPage));
+  const view=filtrados.slice((page-1)*perPage,page*perPage);
+  useEffect(()=>{setPage(1);},[q]);
+
+  const abrirNuevo=()=>{ setEditando(null); setNombre(""); setTelefono(""); setShowForm(true); };
+  const abrirEditar=(c)=>{ setEditando(c); setNombre(c.nombre); setTelefono(c.telefono||""); setShowForm(true); };
+  const guardar=async()=>{
+    if(!normUbic(nombre)) return;
+    if(editando){ await onUpdate(editando.id,{nombre:normUbic(nombre),telefono:normUbic(telefono)}); }
+    else { await onAdd(normUbic(nombre),normUbic(telefono)); }
+    setShowForm(false);
+  };
+
+  return (
+    <div className="fade">
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
+        <div>
+          <h3 className="font-serif text-2xl text-ink">Clientes</h3>
+          <p className="text-sm text-sand-600">{filtrados.length} cliente(s)</p>
+        </div>
+        <button onClick={abrirNuevo} className="px-5 py-2.5 rounded-xl bg-ink text-white hover:bg-sand-900 font-semibold">+ Agregar cliente</button>
+      </div>
+      <div className="mb-3">
+        <input className={inp+" max-w-sm"} value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar por nombre o teléfono…"/>
+      </div>
+      <div className="bg-white rounded-2xl border border-sand-200 shadow-sm overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-sand-100 border-b border-sand-200"><tr>
+            {["Cliente","Teléfono","Acciones"].map(h=><th key={h} className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-sand-600">{h}</th>)}
+          </tr></thead>
+          <tbody>
+            {view.length===0 && <tr><td colSpan="3" className="text-center py-8 text-sand-500">Sin clientes</td></tr>}
+            {view.map(c=>(
+              <tr key={c.id} className="border-b border-sand-100 hover:bg-sand-50">
+                <td className="px-4 py-2.5">{c.nombre}</td>
+                <td className="px-4 py-2.5 text-sand-600">{c.telefono||"—"}</td>
+                <td className="px-4 py-2.5 whitespace-nowrap">
+                  <button onClick={()=>abrirEditar(c)} className="text-sand-600 hover:text-ink px-1" title="Editar">✏️</button>
+                  <button onClick={()=>setConfirmDel(c)} className="text-red-500 hover:text-red-700 px-1" title="Eliminar">🗑️</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {pages>1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1} className="px-3 py-1.5 rounded-lg border border-sand-300 text-sm disabled:opacity-40">‹ Anterior</button>
+          <span className="text-sm text-sand-600">Página {page} de {pages}</span>
+          <button onClick={()=>setPage(p=>Math.min(pages,p+1))} disabled={page===pages} className="px-3 py-1.5 rounded-lg border border-sand-300 text-sm disabled:opacity-40">Siguiente ›</button>
+        </div>
+      )}
+
+      {showForm && (
+        <Modal title={editando?"Editar cliente":"Nuevo cliente"} onClose={()=>setShowForm(false)}>
+          <div className="space-y-4">
+            <Field label="Nombre *"><input className={inp} value={nombre} onChange={e=>setNombre(e.target.value)} autoFocus/></Field>
+            <Field label="Teléfono"><input className={inp} value={telefono} onChange={e=>setTelefono(e.target.value)} placeholder="11 5555-5555"/></Field>
+          </div>
+          <div className="flex gap-3 mt-6 justify-end">
+            <button onClick={()=>setShowForm(false)} className="px-5 py-2.5 rounded-xl border border-sand-300 text-sand-700 hover:bg-sand-100">Cancelar</button>
+            <button onClick={guardar} className="px-6 py-2.5 rounded-xl bg-ink text-white hover:bg-sand-900 font-semibold">Guardar</button>
+          </div>
+        </Modal>
+      )}
+      {confirmDel && (
+        <Modal title="Eliminar cliente" onClose={()=>setConfirmDel(null)}>
+          <p className="text-sm text-ink mb-4">¿Eliminar a "{confirmDel.nombre}"? Esta acción no se puede deshacer.</p>
+          <div className="flex gap-3 justify-end">
+            <button onClick={()=>setConfirmDel(null)} className="px-4 py-2 rounded-xl border border-sand-300 text-sm hover:bg-sand-100">Cancelar</button>
+            <button onClick={()=>{ onDelete(confirmDel.id); setConfirmDel(null); }} className="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700">Eliminar</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+
+function ClienteSelect({clientes,valorCliente,valorTelefono,onChange,onAddCliente,inp}){
+  const [abierto,setAbierto]=useState(false);
+  const [busqueda,setBusqueda]=useState("");
+  const cont=useRef();
+  useEffect(()=>{
+    const cerrar=(e)=>{ if(cont.current && !cont.current.contains(e.target)) setAbierto(false); };
+    document.addEventListener("mousedown",cerrar);
+    return ()=>document.removeEventListener("mousedown",cerrar);
+  },[]);
+  const texto=abierto?busqueda:(valorCliente||"");
+  const filtro=(clientes||[]).filter(c=>normUbic(c.nombre).toLowerCase().includes(busqueda.toLowerCase())).slice(0,50);
+  const existeExacto=(clientes||[]).some(c=>normUbic(c.nombre).toLowerCase()===normUbic(busqueda).toLowerCase());
+  const elegir=(c)=>{ onChange({cliente:c.nombre, telefono:c.telefono||valorTelefono||""}); setAbierto(false); setBusqueda(""); };
+  const agregarNuevo=async()=>{
+    const nom=normUbic(busqueda);
+    if(!nom) return;
+    const c=await onAddCliente(nom, valorTelefono||"");
+    if(c){ onChange({cliente:c.nombre, telefono:c.telefono||valorTelefono||""}); }
+    setAbierto(false); setBusqueda("");
+  };
+  return (
+    <div className="relative" ref={cont}>
+      <input className={inp} value={texto}
+        onFocus={()=>{ setAbierto(true); setBusqueda(valorCliente||""); }}
+        onChange={e=>{ setBusqueda(e.target.value); setAbierto(true); onChange({cliente:e.target.value, telefono:valorTelefono}); }}
+        placeholder="Buscar o escribir cliente…"/>
+      {abierto && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-sand-200 rounded-xl shadow-lg max-h-56 overflow-y-auto">
+          {filtro.length===0 && !busqueda.trim() && <div className="px-3 py-2 text-xs text-sand-500">Escribí para buscar…</div>}
+          {filtro.map(c=>(
+            <button key={c.id} type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>elegir(c)}
+              className="w-full text-left px-3 py-2 text-sm hover:bg-sand-100 flex justify-between">
+              <span>{c.nombre}</span>{c.telefono && <span className="text-xs text-sand-500">{c.telefono}</span>}
+            </button>
+          ))}
+          {busqueda.trim() && !existeExacto && (
+            <button type="button" onMouseDown={e=>e.preventDefault()} onClick={agregarNuevo}
+              className="w-full text-left px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50 border-t border-sand-200 font-medium">
+              + Agregar cliente nuevo: "{normUbic(busqueda)}"
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+function VentaEditForm({venta,onSave,onClose,productos,clientes=[],onAddCliente}){
   const [f,setF]=useState({...venta});
   const [err,setErr]=useState("");
   const [showResumen,setShowResumen]=useState(false);
@@ -1234,8 +1426,8 @@ function VentaEditForm({venta,onSave,onClose,productos}){
           <input className={inp} list="fact-list" value={f.facturacion||""} onChange={e=>set('facturacion',e.target.value)}/>
           <datalist id="fact-list">{FACTURACION.map(x=><option key={x} value={x}/>)}</datalist>
         </Field>
-        <Field label="Cliente"><input className={inp} value={f.cliente||""} onChange={e=>set('cliente',e.target.value)}/></Field>
-        <Field label="Teléfono"><input className={inp} value={f.telefono||""} onChange={e=>set('telefono',e.target.value)}/></Field>
+        <Field label="Cliente"><ClienteSelect clientes={clientes} valorCliente={f.cliente} valorTelefono={f.telefono} onChange={({cliente,telefono})=>setF(p=>({...p,cliente,telefono}))} onAddCliente={onAddCliente} inp={inp}/></Field>
+        <Field label="Teléfono"><input className={inp} value={f.telefono||""} onChange={e=>set('telefono',e.target.value)} placeholder="Se autocompleta con el cliente"/></Field>
         <Field label="Vendedora *"><input className={inp} value={f.vendedora||""} onChange={e=>set('vendedora',e.target.value)}/></Field>
         <Field label="Contenedor">
           <input className={inp} list="cont-list" value={f.contenedor_origen||""} onChange={e=>set('contenedor_origen',e.target.value)}/>
@@ -1284,7 +1476,7 @@ function VentaEditForm({venta,onSave,onClose,productos}){
 }
 
 
-function VentaForm({initial,onSave,onClose,productos}){
+function VentaForm({initial,onSave,onClose,productos,clientes=[],onAddCliente}){
   // Campos GENERALES de la venta (se mantienen entre productos, editables)
   const GEN_EMPTY={ fecha:new Date().toISOString().slice(0,10), cliente:"", telefono:"", vendedora:"", estado:"Cobrada y entregada", facturacion:"Sin Factura", condicion:"Minorista", observaciones:"" };
   // Campos del PRODUCTO (se limpian al Agregar)
@@ -1412,8 +1604,8 @@ function VentaForm({initial,onSave,onClose,productos}){
         <Field label="Condición de venta *">
           <select className={inp} value={gen.condicion} onChange={e=>setG('condicion',e.target.value)}>{CONDICIONES.map(x=><option key={x.label}>{x.label}</option>)}</select>
         </Field>
-        <Field label="Cliente"><input className={inp} value={gen.cliente} onChange={e=>setG('cliente',e.target.value)}/></Field>
-        <Field label="Teléfono"><input className={inp} value={gen.telefono} onChange={e=>setG('telefono',e.target.value)} placeholder="11 5555-5555"/></Field>
+        <Field label="Cliente"><ClienteSelect clientes={clientes} valorCliente={gen.cliente} valorTelefono={gen.telefono} onChange={({cliente,telefono})=>setGen(p=>({...p,cliente,telefono}))} onAddCliente={onAddCliente} inp={inp}/></Field>
+        <Field label="Teléfono"><input className={inp} value={gen.telefono} onChange={e=>setG('telefono',e.target.value)} placeholder="Se autocompleta con el cliente"/></Field>
         <Field label="Facturación">
           <select className={inp} value={gen.facturacion} onChange={e=>setG('facturacion',e.target.value)}>{FACTURACION.map(x=><option key={x}>{x}</option>)}</select>
         </Field>
@@ -1564,6 +1756,9 @@ function VentaForm({initial,onSave,onClose,productos}){
 function VentasPanel({ventas,role,onNew,onEdit,onAnular}){
   const [q,setQ]=useState("");
   const [fe,setFe]=useState("");
+  const [page,setPage]=useState(1); const perPage=15;
+  // Estados disponibles en el filtro: los fijos + cualquiera que ya exista en las ventas
+  const estadosDisponibles=[...new Set([...ESTADOS_VENTA, ...ventas.map(v=>v.estado).filter(Boolean)])];
   const filtered=useMemo(()=>{
     const list=[...ventas].filter(v=>!v.anulada).sort((a,b)=>{
       const d=(b.fecha||"").localeCompare(a.fecha||"");
@@ -1580,18 +1775,20 @@ function VentasPanel({ventas,role,onNew,onEdit,onAnular}){
         (v.modelo||"").toLowerCase().includes(f))
     );
   },[ventas,q,fe]);
-  const view = (q.trim()||fe) ? filtered : filtered.slice(0,10);
+  const pages=Math.max(1,Math.ceil(filtered.length/perPage));
+  const view=filtered.slice((page-1)*perPage,page*perPage);
+  useEffect(()=>{setPage(1);},[q,fe]);
   return (
     <div className="fade">
       <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
         <input className="px-3 py-2 rounded-lg border border-sand-300 bg-white outline-none focus:border-sand-500 text-sm flex-1 min-w-[180px]" placeholder="🔍 Buscar por producto, cliente, teléfono o vendedora" value={q} onChange={e=>setQ(e.target.value)}/>
         <select className="px-3 py-2 rounded-lg border border-sand-300 bg-white outline-none focus:border-sand-500 text-sm" value={fe} onChange={e=>setFe(e.target.value)}>
           <option value="">Todos los estados</option>
-          {ESTADOS_VENTA.map(s=><option key={s}>{s}</option>)}
+          {estadosDisponibles.map(s=><option key={s}>{s}</option>)}
         </select>
         {role==="admin" && <button onClick={onNew} className="px-4 py-2 rounded-xl bg-ink text-white text-sm font-semibold hover:bg-sand-900">+ Registrar venta</button>}
       </div>
-      <h3 className="font-serif text-xl text-ink mb-3">{(q.trim()||fe)?`Resultados (${view.length})`:"Últimas 10 ventas"}</h3>
+      <h3 className="font-serif text-xl text-ink mb-3">{(q.trim()||fe)?`Resultados (${filtered.length})`:`Todas las ventas (${filtered.length})`}</h3>
       <div className="bg-white rounded-2xl border border-sand-200 shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-sand-100 border-b border-sand-200">
@@ -1642,6 +1839,13 @@ function VentasPanel({ventas,role,onNew,onEdit,onAnular}){
           </tbody>
         </table>
       </div>
+      {pages>1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1} className="px-3 py-1.5 rounded-lg border border-sand-300 text-sm disabled:opacity-40">‹ Anterior</button>
+          <span className="text-sm text-sand-600">Página {page} de {pages}</span>
+          <button onClick={()=>setPage(p=>Math.min(pages,p+1))} disabled={page===pages} className="px-3 py-1.5 rounded-lg border border-sand-300 text-sm disabled:opacity-40">Siguiente ›</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -2445,12 +2649,14 @@ function App(){
   const [showForm,setShowForm]=useState(false);
   const [confirm,setConfirm]=useState(null);
   const [ventas,setVentas]=useState([]);
+  const [clientes,setClientes]=useState([]);
   const [showVentaForm,setShowVentaForm]=useState(false);
   const [editingVenta,setEditingVenta]=useState(null);
   const [confirmVenta,setConfirmVenta]=useState(null);
   const [motivoAnul,setMotivoAnul]=useState("");
   const [reintegrar,setReintegrar]=useState(true);
   const [confirmDelVenta,setConfirmDelVenta]=useState(null);
+  const [traspaso,setTraspaso]=useState(null); // producto a traspasar a consignación
   const fileRef=useRef();
   const notify=(msg,type="ok")=>setToast({msg,type});
 
@@ -2467,6 +2673,9 @@ function App(){
       setRows(data||[]);
       const v=await api.list(TABLE_V);
       setVentas(v||[]);
+      // Cargar clientes (si la tabla todavía no existe, no rompe: queda lista vacía)
+      try{ const cl=await api.list(TABLE_CLIENTES); setClientes(cl||[]); }
+      catch(e){ setClientes([]); }
       if(CLOUD && data && data.length) notify(`Conectado a la nube · ${data.length} productos`);
     }catch(e){ notify("No se pudo leer la nube: "+e.message,"error"); logEvent("error","Error de conexión al cargar datos: "+e.message,"error"); }
     setLoading(false);
@@ -2487,6 +2696,75 @@ function App(){
   },[user]);
 
   const containers=[...new Set(rows.map(r=>r.contenedor).filter(Boolean))].sort();
+
+  // Agrega un cliente a la tabla (si no existe) y lo devuelve. Reutilizada por Ventas y la solapa Clientes.
+  const addCliente=async(nombre,telefono="")=>{
+    const nom=normUbic(nombre);
+    if(!nom) return null;
+    const existe=clientes.find(c=>normUbic(c.nombre).toLowerCase()===nom.toLowerCase());
+    if(existe){
+      if(telefono && !existe.telefono){
+        try{ const u=await api.update(existe.id,{telefono},TABLE_CLIENTES); setClientes(cs=>cs.map(c=>c.id===existe.id?u:c)); return u; }catch(e){ return existe; }
+      }
+      return existe;
+    }
+    try{
+      const n=await api.create({nombre:nom,telefono:normUbic(telefono)},TABLE_CLIENTES);
+      setClientes(cs=>[...cs,n]);
+      return n;
+    }catch(e){ notify("No se pudo agregar el cliente: "+e.message,"error"); return null; }
+  };
+  const updateCliente=async(id,campos)=>{
+    try{ const u=await api.update(id,campos,TABLE_CLIENTES); setClientes(cs=>cs.map(c=>c.id===id?u:c)); notify("Cliente actualizado"); }
+    catch(e){ notify("No se pudo actualizar: "+e.message,"error"); }
+  };
+  const deleteCliente=async(id)=>{
+    try{ await api.remove(id,TABLE_CLIENTES); setClientes(cs=>cs.filter(c=>c.id!==id)); notify("Cliente eliminado","warn"); }
+    catch(e){ notify("No se pudo eliminar: "+e.message,"error"); }
+  };
+
+  // Traspaso PARCIAL de un producto de su contenedor a Consignación, por cantidad y con cliente.
+  // Conserva el stock total: descuenta N del origen y suma N a un registro de consignación (mismo modelo + cliente).
+  const traspasarAConsignacion=async(prod,cantidad,cliente)=>{
+    const cant=Number(cantidad)||0;
+    const disp=Number(prod.stock)||0;
+    const cli=normUbic(cliente);
+    // Validaciones (defensa en profundidad; el modal ya valida)
+    if(cant<=0){ notify("La cantidad debe ser mayor a 0","error"); return false; }
+    if(cant>disp){ notify(`No podés pasar más de ${disp} unidad(es)`,"error"); return false; }
+    if(!cli || cli==="Depósito"){ notify("Elegí un cliente para la consignación","error"); return false; }
+    try{
+      // 1) Descontar del producto de origen
+      const ns=disp-cant;
+      const up=await api.update(prod.id,{stock:ns},TABLE);
+      setRows(rs=>rs.map(r=>r.id===prod.id?up:r));
+      // 2) Buscar si ya existe ese modelo en consignación para ese cliente → sumar
+      const existente=rows.find(r=>r.id!==prod.id
+        && (r.codigo||"")===(prod.codigo||"")
+        && normUbic(r.contenedor).toUpperCase()===CONSIGNACION
+        && normUbic(r.cliente).toLowerCase()===cli.toLowerCase());
+      if(existente){
+        const upc=await api.update(existente.id,{stock:(Number(existente.stock)||0)+cant},TABLE);
+        setRows(rs=>rs.map(r=>r.id===existente.id?upc:r));
+      } else {
+        // Crear registro nuevo en consignación (mismo modelo, cliente asignado)
+        const nuevo={
+          codigo:prod.codigo, nombre:prod.nombre, color:prod.color||"", medidas:prod.medidas||"",
+          mes_compra:prod.mes_compra||"", anio_compra:prod.anio_compra||"", contenedor:CONSIGNACION,
+          stock:cant, precio_compra:prod.precio_compra||0, moneda:prod.moneda||"USD",
+          proveedor:prod.proveedor||"", observaciones:`Traspaso desde ${prod.contenedor}`, consignacion:true, cliente:cli
+        };
+        const nc=await api.create(nuevo,TABLE);
+        setRows(rs=>[...rs,nc]);
+      }
+      // 3) Registrar el movimiento (trazabilidad)
+      logMovimiento({accion:"Traspaso a Consignación",producto:`${prod.codigo} · ${prod.nombre}`,contenedor:prod.contenedor,producto_id:prod.id,
+        stock_anterior:disp,stock_nuevo:ns,costo_anterior:prod.precio_compra,costo_nuevo:prod.precio_compra,
+        observaciones:`${cant}u de ${prod.contenedor} → Consignación (${cli})`});
+      notify(`${cant}u de "${prod.nombre}" pasada(s) a consignación (${cli})`);
+      return true;
+    }catch(e){ notify("Error en el traspaso: "+e.message,"error"); return false; }
+  };
 
   const save=async(f)=>{
     try{
@@ -2789,7 +3067,7 @@ function App(){
   const isAdmin = user.role==="super" || user.role==="admin"; // puede operar (crear/editar/borrar)
   const opRole  = "admin";                            // rol que reciben los componentes de operación
   // Pestañas base (todos los usuarios operativos)
-  const TABS=[["dash","Dashboard","📊"],["table","Inventario","📋"],["reports","Reportes","📈"],["compras","Compras","🛒"],["ventas","Ventas","🧾"],["anuladas","Ventas Anuladas","🚫"],["ventasdash","Dashboard Ventas","💹"],["ayuda","Ayuda","💬"]];
+  const TABS=[["dash","Dashboard","📊"],["table","Inventario","📋"],["reports","Reportes","📈"],["compras","Compras","🛒"],["ventas","Ventas","🧾"],["anuladas","Ventas Anuladas","🚫"],["ventasdash","Dashboard Ventas","💹"],["clientes","Clientes","👥"],["ayuda","Ayuda","💬"]];
   // Pestañas exclusivas del Administrador1
   const TABS_SUPER=[["incidentes","Incidentes","🚦"],["actividad","Actividad de Stock","📦"],["health","Health Check","❤️"],["logs","Logs","📜"],["instructivos","Instructivos","📚"]];
   const visibleTabs = isSuper ? [...TABS, ...TABS_SUPER] : TABS;
@@ -2839,13 +3117,14 @@ function App(){
         {loading ? <div className="text-center py-20 text-sand-500">Cargando datos…</div> : (
           <>
             {tab==="dash" && <Dashboard rows={rows}/>}
-            {tab==="table" && <Table rows={rows} role={opRole} isSuper={isSuper} onEdit={(r)=>{setEditing(r);setShowForm(true);}} onDelete={(r)=>setConfirm(r)} onStock={changeStock}/>}
+            {tab==="table" && <Table rows={rows} role={opRole} isSuper={isSuper} onEdit={(r)=>{setEditing(r);setShowForm(true);}} onDelete={(r)=>setConfirm(r)} onStock={changeStock} onTraspaso={(r)=>setTraspaso(r)}/>}
             {tab==="reports" && <Reports rows={rows}/>}
             {tab==="compras" && <Table rows={rows} role={opRole} onEdit={(r)=>{setEditing(r);setShowForm(true);}} onDelete={(r)=>setConfirm(r)}/>}
             {tab==="ventas" && <VentasPanel ventas={ventas} role={opRole} onNew={()=>{setEditingVenta(null);setShowVentaForm(true);}} onEdit={(v)=>{setEditingVenta(v);setShowVentaForm(true);}} onAnular={(v)=>{setMotivoAnul("");setConfirmVenta(v);}}/>}
             {tab==="anuladas" && <VentasAnuladasPanel ventas={ventas} role={opRole} onRestaurar={restaurarVenta} onEliminar={(v)=>setConfirmDelVenta(v)}/>}
             {tab==="ventasdash" && <VentasDashboard ventas={ventas}/>}
             {tab==="ayuda" && <AyudaPanel user={user} onNotify={notify}/>}
+            {tab==="clientes" && <ClientesPanel clientes={clientes} onAdd={addCliente} onUpdate={updateCliente} onDelete={deleteCliente}/>}
             {isSuper && tab==="incidentes" && <IncidentesPanel rows={rows} ventas={ventas} cloud={CLOUD}/>}
             {isSuper && tab==="actividad" && <ActividadStockPanel onAnular={anularMovimiento}/>}
             {isSuper && tab==="health" && <HealthPanel rows={rows} ventas={ventas} cloud={CLOUD}/>}
@@ -2856,8 +3135,9 @@ function App(){
       </main>
 
       {showForm && <ProductForm initial={editing} onSave={save} onClose={()=>{setShowForm(false);setEditing(null);}} containers={[...new Set([...containers, "CONSIGNACION"])].sort()} isSuper={isSuper} ubicacionesExistentes={[...new Set(rows.map(r=>normUbic(r.cliente)).filter(u=>u&&u!=="Depósito"))].sort()}/>}
-      {showVentaForm && !editingVenta && <VentaForm initial={null} onSave={saveVenta} onClose={()=>{setShowVentaForm(false);setEditingVenta(null);}} productos={rows}/>}
-      {showVentaForm && editingVenta && <VentaEditForm venta={editingVenta} onSave={saveVenta} onClose={()=>{setShowVentaForm(false);setEditingVenta(null);}} productos={rows}/>}
+      {traspaso && <TraspasoModal producto={traspaso} clientes={clientes} onAddCliente={addCliente} onClose={()=>setTraspaso(null)} onConfirm={async(cant,cli)=>{ const ok=await traspasarAConsignacion(traspaso,cant,cli); if(ok) setTraspaso(null); }}/>}
+      {showVentaForm && !editingVenta && <VentaForm initial={null} onSave={saveVenta} onClose={()=>{setShowVentaForm(false);setEditingVenta(null);}} productos={rows} clientes={clientes} onAddCliente={addCliente}/>}
+      {showVentaForm && editingVenta && <VentaEditForm venta={editingVenta} onSave={saveVenta} onClose={()=>{setShowVentaForm(false);setEditingVenta(null);}} productos={rows} clientes={clientes} onAddCliente={addCliente}/>}
 
       {confirmVenta && (
         <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4" onClick={()=>{setConfirmVenta(null);setMotivoAnul("");setReintegrar(true);}}>
