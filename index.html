@@ -1207,7 +1207,7 @@ function TraspasoModal({producto,clientes,onAddCliente,onClose,onConfirm}){
           <input type="number" min="1" max={disp} className={inp} value={cant} onChange={e=>setCant(e.target.value)} autoFocus/>
         </Field>
         <Field label="Cliente de la consignación *">
-          <ClienteSelect clientes={clientes} valorCliente={cliente} valorTelefono={telefono} onChange={({cliente,telefono})=>{ setCliente(cliente); setTelefono(telefono); }} onAddCliente={onAddCliente} inp={inp}/>
+          <ClienteSelect clientes={clientes} valorCliente={cliente} valorTelefono={telefono} onChange={({cliente,telefono})=>{ setCliente(cliente); setTelefono(telefono); }} onAddCliente={onAddCliente} inp={inp} soloConsignacion={true}/>
         </Field>
       </div>
       <div className="bg-sand-100 rounded-lg px-3 py-2 mt-4 text-xs text-sand-600">
@@ -1228,6 +1228,7 @@ function ClientesPanel({clientes,onAdd,onUpdate,onDelete}){
   const [editando,setEditando]=useState(null);
   const [nombre,setNombre]=useState("");
   const [telefono,setTelefono]=useState("");
+  const [esConsig,setEsConsig]=useState(false);
   const [confirmDel,setConfirmDel]=useState(null);
   const [page,setPage]=useState(1); const perPage=15;
   const inp=FieldInp;
@@ -1240,12 +1241,12 @@ function ClientesPanel({clientes,onAdd,onUpdate,onDelete}){
   const view=filtrados.slice((page-1)*perPage,page*perPage);
   useEffect(()=>{setPage(1);},[q]);
 
-  const abrirNuevo=()=>{ setEditando(null); setNombre(""); setTelefono(""); setShowForm(true); };
-  const abrirEditar=(c)=>{ setEditando(c); setNombre(c.nombre); setTelefono(c.telefono||""); setShowForm(true); };
+  const abrirNuevo=()=>{ setEditando(null); setNombre(""); setTelefono(""); setEsConsig(false); setShowForm(true); };
+  const abrirEditar=(c)=>{ setEditando(c); setNombre(c.nombre); setTelefono(c.telefono||""); setEsConsig(!!c.consignacion); setShowForm(true); };
   const guardar=async()=>{
     if(!normUbic(nombre)) return;
-    if(editando){ await onUpdate(editando.id,{nombre:normUbic(nombre),telefono:normUbic(telefono)}); }
-    else { await onAdd(normUbic(nombre),normUbic(telefono)); }
+    if(editando){ await onUpdate(editando.id,{nombre:normUbic(nombre),telefono:normUbic(telefono),consignacion:esConsig}); }
+    else { await onAdd(normUbic(nombre),normUbic(telefono),esConsig); }
     setShowForm(false);
   };
 
@@ -1264,14 +1265,21 @@ function ClientesPanel({clientes,onAdd,onUpdate,onDelete}){
       <div className="bg-white rounded-2xl border border-sand-200 shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-sand-100 border-b border-sand-200"><tr>
-            {["Cliente","Teléfono","Acciones"].map(h=><th key={h} className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-sand-600">{h}</th>)}
+            {["Cliente","Teléfono","Consignación","Acciones"].map(h=><th key={h} className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-sand-600">{h}</th>)}
           </tr></thead>
           <tbody>
-            {view.length===0 && <tr><td colSpan="3" className="text-center py-8 text-sand-500">Sin clientes</td></tr>}
+            {view.length===0 && <tr><td colSpan="4" className="text-center py-8 text-sand-500">Sin clientes</td></tr>}
             {view.map(c=>(
               <tr key={c.id} className="border-b border-sand-100 hover:bg-sand-50">
                 <td className="px-4 py-2.5">{c.nombre}</td>
                 <td className="px-4 py-2.5 text-sand-600">{c.telefono||"—"}</td>
+                <td className="px-4 py-2.5">
+                  <button onClick={()=>onUpdate(c.id,{consignacion:!c.consignacion})}
+                    className={"px-2.5 py-1 rounded-full text-xs font-medium "+(c.consignacion?"bg-purple-100 text-purple-800 hover:bg-purple-200":"bg-sand-100 text-sand-600 hover:bg-sand-200")}
+                    title="Clic para cambiar">
+                    {c.consignacion?"Sí":"No"}
+                  </button>
+                </td>
                 <td className="px-4 py-2.5 whitespace-nowrap">
                   <button onClick={()=>abrirEditar(c)} className="text-sand-600 hover:text-ink px-1" title="Editar">✏️</button>
                   <button onClick={()=>setConfirmDel(c)} className="text-red-500 hover:text-red-700 px-1" title="Eliminar">🗑️</button>
@@ -1294,6 +1302,10 @@ function ClientesPanel({clientes,onAdd,onUpdate,onDelete}){
           <div className="space-y-4">
             <Field label="Nombre *"><input className={inp} value={nombre} onChange={e=>setNombre(e.target.value)} autoFocus/></Field>
             <Field label="Teléfono"><input className={inp} value={telefono} onChange={e=>setTelefono(e.target.value)} placeholder="11 5555-5555"/></Field>
+            <label className="flex items-center gap-2 text-sm text-ink cursor-pointer">
+              <input type="checkbox" checked={esConsig} onChange={e=>setEsConsig(e.target.checked)} className="accent-purple-600 w-4 h-4"/>
+              Es cliente de consignación
+            </label>
           </div>
           <div className="flex gap-3 mt-6 justify-end">
             <button onClick={()=>setShowForm(false)} className="px-5 py-2.5 rounded-xl border border-sand-300 text-sand-700 hover:bg-sand-100">Cancelar</button>
@@ -1315,7 +1327,7 @@ function ClientesPanel({clientes,onAdd,onUpdate,onDelete}){
 }
 
 
-function ClienteSelect({clientes,valorCliente,valorTelefono,onChange,onAddCliente,inp}){
+function ClienteSelect({clientes,valorCliente,valorTelefono,onChange,onAddCliente,inp,soloConsignacion=false}){
   const [abierto,setAbierto]=useState(false);
   const [busqueda,setBusqueda]=useState("");
   const cont=useRef();
@@ -1325,13 +1337,16 @@ function ClienteSelect({clientes,valorCliente,valorTelefono,onChange,onAddClient
     return ()=>document.removeEventListener("mousedown",cerrar);
   },[]);
   const texto=abierto?busqueda:(valorCliente||"");
-  const filtro=(clientes||[]).filter(c=>normUbic(c.nombre).toLowerCase().includes(busqueda.toLowerCase())).slice(0,50);
-  const existeExacto=(clientes||[]).some(c=>normUbic(c.nombre).toLowerCase()===normUbic(busqueda).toLowerCase());
+  // Si soloConsignacion, filtrar únicamente clientes marcados como de consignación
+  const base=(clientes||[]).filter(c=>!soloConsignacion || c.consignacion===true);
+  const filtro=base.filter(c=>normUbic(c.nombre).toLowerCase().includes(busqueda.toLowerCase())).slice(0,50);
+  const existeExacto=base.some(c=>normUbic(c.nombre).toLowerCase()===normUbic(busqueda).toLowerCase());
   const elegir=(c)=>{ onChange({cliente:c.nombre, telefono:c.telefono||valorTelefono||""}); setAbierto(false); setBusqueda(""); };
   const agregarNuevo=async()=>{
     const nom=normUbic(busqueda);
     if(!nom) return;
-    const c=await onAddCliente(nom, valorTelefono||"");
+    // Si estamos en modo consignación, el cliente nuevo se marca como de consignación
+    const c=await onAddCliente(nom, valorTelefono||"", soloConsignacion);
     if(c){ onChange({cliente:c.nombre, telefono:c.telefono||valorTelefono||""}); }
     setAbierto(false); setBusqueda("");
   };
@@ -1340,10 +1355,10 @@ function ClienteSelect({clientes,valorCliente,valorTelefono,onChange,onAddClient
       <input className={inp} value={texto}
         onFocus={()=>{ setAbierto(true); setBusqueda(valorCliente||""); }}
         onChange={e=>{ setBusqueda(e.target.value); setAbierto(true); onChange({cliente:e.target.value, telefono:valorTelefono}); }}
-        placeholder="Buscar o escribir cliente…"/>
+        placeholder={soloConsignacion?"Buscar cliente de consignación…":"Buscar o escribir cliente…"}/>
       {abierto && (
         <div className="absolute z-50 mt-1 w-full bg-white border border-sand-200 rounded-xl shadow-lg max-h-56 overflow-y-auto">
-          {filtro.length===0 && !busqueda.trim() && <div className="px-3 py-2 text-xs text-sand-500">Escribí para buscar…</div>}
+          {filtro.length===0 && !busqueda.trim() && <div className="px-3 py-2 text-xs text-sand-500">{soloConsignacion?"Escribí para buscar (solo clientes de consignación)…":"Escribí para buscar…"}</div>}
           {filtro.map(c=>(
             <button key={c.id} type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>elegir(c)}
               className="w-full text-left px-3 py-2 text-sm hover:bg-sand-100 flex justify-between">
@@ -1353,7 +1368,7 @@ function ClienteSelect({clientes,valorCliente,valorTelefono,onChange,onAddClient
           {busqueda.trim() && !existeExacto && (
             <button type="button" onMouseDown={e=>e.preventDefault()} onClick={agregarNuevo}
               className="w-full text-left px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50 border-t border-sand-200 font-medium">
-              + Agregar cliente nuevo: "{normUbic(busqueda)}"
+              + Agregar cliente{soloConsignacion?" de consignación":""} nuevo: "{normUbic(busqueda)}"
             </button>
           )}
         </div>
@@ -1431,7 +1446,7 @@ function VentaEditForm({venta,onSave,onClose,productos,clientes=[],onAddCliente}
             {FACTURACION.map(x=><option key={x} value={x}>{x}</option>)}
           </select>
         </Field>
-        <Field label="Cliente"><ClienteSelect clientes={clientes} valorCliente={f.cliente} valorTelefono={f.telefono} onChange={({cliente,telefono})=>setF(p=>({...p,cliente,telefono}))} onAddCliente={onAddCliente} inp={inp}/></Field>
+        <Field label="Cliente"><ClienteSelect clientes={clientes} valorCliente={f.cliente} valorTelefono={f.telefono} onChange={({cliente,telefono})=>setF(p=>({...p,cliente,telefono}))} onAddCliente={onAddCliente} inp={inp} soloConsignacion={f.condicion===CONDICION_SIN_DESCUENTO}/></Field>
         <Field label="Teléfono"><input className={inp} value={f.telefono||""} onChange={e=>set('telefono',e.target.value)} placeholder="Se autocompleta con el cliente"/></Field>
         <Field label="Vendedora *"><input className={inp} value={f.vendedora||""} onChange={e=>set('vendedora',e.target.value)}/></Field>
         <Field label="Contenedor">
@@ -1621,7 +1636,7 @@ function VentaForm({initial,onSave,onClose,productos,clientes=[],onAddCliente}){
         <Field label="Condición de venta *">
           <select className={inp} value={gen.condicion} onChange={e=>setG('condicion',e.target.value)}>{CONDICIONES.map(x=><option key={x.label}>{x.label}</option>)}</select>
         </Field>
-        <Field label="Cliente"><ClienteSelect clientes={clientes} valorCliente={gen.cliente} valorTelefono={gen.telefono} onChange={({cliente,telefono})=>setGen(p=>({...p,cliente,telefono}))} onAddCliente={onAddCliente} inp={inp}/></Field>
+        <Field label="Cliente"><ClienteSelect clientes={clientes} valorCliente={gen.cliente} valorTelefono={gen.telefono} onChange={({cliente,telefono})=>setGen(p=>({...p,cliente,telefono}))} onAddCliente={onAddCliente} inp={inp} soloConsignacion={gen.condicion===CONDICION_SIN_DESCUENTO}/></Field>
         <Field label="Teléfono"><input className={inp} value={gen.telefono} onChange={e=>setG('telefono',e.target.value)} placeholder="Se autocompleta con el cliente"/></Field>
         <Field label="Facturación">
           <select className={inp} value={gen.facturacion} onChange={e=>setG('facturacion',e.target.value)}>{FACTURACION.map(x=><option key={x}>{x}</option>)}</select>
@@ -1773,6 +1788,7 @@ function VentaForm({initial,onSave,onClose,productos,clientes=[],onAddCliente}){
 function VentasPanel({ventas,role,onNew,onEdit,onAnular}){
   const [q,setQ]=useState("");
   const [fe,setFe]=useState("");
+  const [vista,setVista]=useState("detalle"); // "detalle" | "resumen"
   const [page,setPage]=useState(1); const perPage=15;
   // Estados disponibles en el filtro: los fijos + cualquiera que ya exista en las ventas
   const estadosDisponibles=[...new Set([...ESTADOS_VENTA, ...ventas.map(v=>v.estado).filter(Boolean)])];
@@ -1792,9 +1808,27 @@ function VentasPanel({ventas,role,onNew,onEdit,onAnular}){
         (v.modelo||"").toLowerCase().includes(f))
     );
   },[ventas,q,fe]);
-  const pages=Math.max(1,Math.ceil(filtered.length/perPage));
+
+  // Agrupar las ventas filtradas por operación, para la vista Resumen.
+  // Usa nro_venta si existe; si no (ventas viejas), agrupa por fecha+cliente+vendedora.
+  const resumen=useMemo(()=>{
+    const grupos={};
+    filtered.forEach(v=>{
+      const key=v.nro_venta || `${(v.fecha||"").slice(0,10)}|${normUbic(v.cliente||"")}|${normUbic(v.vendedora||"")}`;
+      if(!grupos[key]) grupos[key]={ key, nro:v.nro_venta||"—", fecha:v.fecha, cliente:v.cliente, vendedora:v.vendedora, estado:v.estado, contenedor:v.contenedor_origen, items:0, total:0 };
+      const cc=calcVenta(v);
+      grupos[key].items+=1;
+      grupos[key].total+=cc.importe;
+      // Si los estados difieren dentro del grupo, se muestra el del primero (info general)
+    });
+    return Object.values(grupos).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+  },[filtered]);
+
+  const totalRegistros = vista==="resumen" ? resumen.length : filtered.length;
+  const pages=Math.max(1,Math.ceil(totalRegistros/perPage));
   const view=filtered.slice((page-1)*perPage,page*perPage);
-  useEffect(()=>{setPage(1);},[q,fe]);
+  const viewResumen=resumen.slice((page-1)*perPage,page*perPage);
+  useEffect(()=>{setPage(1);},[q,fe,vista]);
   return (
     <div className="fade">
       <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
@@ -1805,7 +1839,39 @@ function VentasPanel({ventas,role,onNew,onEdit,onAnular}){
         </select>
         {role==="admin" && <button onClick={onNew} className="px-4 py-2 rounded-xl bg-ink text-white text-sm font-semibold hover:bg-sand-900">+ Registrar venta</button>}
       </div>
-      <h3 className="font-serif text-xl text-ink mb-3">{(q.trim()||fe)?`Resultados (${filtered.length})`:`Todas las ventas (${filtered.length})`}</h3>
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <h3 className="font-serif text-xl text-ink">{(q.trim()||fe)?`Resultados (${totalRegistros})`:`Total de ventas (${totalRegistros})`}</h3>
+        <div className="inline-flex rounded-lg border border-sand-300 overflow-hidden">
+          <button onClick={()=>setVista("resumen")} className={"px-4 py-1.5 text-sm font-medium "+(vista==="resumen"?"bg-ink text-white":"bg-white text-sand-700 hover:bg-sand-100")}>Resumen</button>
+          <button onClick={()=>setVista("detalle")} className={"px-4 py-1.5 text-sm font-medium "+(vista==="detalle"?"bg-ink text-white":"bg-white text-sand-700 hover:bg-sand-100")}>Detalle</button>
+        </div>
+      </div>
+
+      {vista==="resumen" ? (
+        <div className="bg-white rounded-2xl border border-sand-200 shadow-sm overflow-x-auto">
+          <table className="w-full text-xs sm:text-sm">
+            <thead className="bg-sand-100 border-b border-sand-200"><tr>
+              {["Fecha","N° Venta","Cliente","Vendedora","Estado","Contenedor","Productos","Total"].map(h=>
+                <th key={h} className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-sand-600 whitespace-nowrap">{h}</th>)}
+            </tr></thead>
+            <tbody>
+              {viewResumen.length===0 && <tr><td colSpan="8" className="text-center py-8 text-sand-500">Sin ventas</td></tr>}
+              {viewResumen.map(g=>(
+                <tr key={g.key} className="border-b border-sand-100 hover:bg-sand-50">
+                  <td className="px-3 py-2 whitespace-nowrap">{(g.fecha||"").slice(0,10)}</td>
+                  <td className="px-3 py-2 whitespace-nowrap font-mono text-xs text-sand-500">{g.nro}</td>
+                  <td className="px-3 py-2">{g.cliente||"—"}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">{g.vendedora||"—"}</td>
+                  <td className="px-3 py-2 whitespace-nowrap"><span className="px-2 py-0.5 rounded-full text-xs bg-sand-100 text-sand-700">{g.estado||"—"}</span></td>
+                  <td className="px-3 py-2 whitespace-nowrap text-sand-600">{g.contenedor||"—"}</td>
+                  <td className="px-3 py-2 text-center">{g.items}</td>
+                  <td className="px-3 py-2 whitespace-nowrap font-semibold">US$ {fmt(g.total)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
       <div className="bg-white rounded-2xl border border-sand-200 shadow-sm overflow-x-auto">
         <table className="w-full text-xs sm:text-sm table-auto">
           <thead className="bg-sand-100 border-b border-sand-200">
@@ -1856,6 +1922,7 @@ function VentasPanel({ventas,role,onNew,onEdit,onAnular}){
           </tbody>
         </table>
       </div>
+      )}
       {pages>1 && (
         <div className="flex items-center justify-center gap-2 mt-4">
           <button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1} className="px-3 py-1.5 rounded-lg border border-sand-300 text-sm disabled:opacity-40">‹ Anterior</button>
@@ -2715,18 +2782,22 @@ function App(){
   const containers=[...new Set(rows.map(r=>r.contenedor).filter(Boolean))].sort();
 
   // Agrega un cliente a la tabla (si no existe) y lo devuelve. Reutilizada por Ventas y la solapa Clientes.
-  const addCliente=async(nombre,telefono="")=>{
+  const addCliente=async(nombre,telefono="",esConsignacion=false)=>{
     const nom=normUbic(nombre);
     if(!nom) return null;
     const existe=clientes.find(c=>normUbic(c.nombre).toLowerCase()===nom.toLowerCase());
     if(existe){
-      if(telefono && !existe.telefono){
-        try{ const u=await api.update(existe.id,{telefono},TABLE_CLIENTES); setClientes(cs=>cs.map(c=>c.id===existe.id?u:c)); return u; }catch(e){ return existe; }
+      const campos={};
+      if(telefono && !existe.telefono) campos.telefono=telefono;
+      // Si se está agregando desde el flujo de consignación y no estaba marcado, marcarlo
+      if(esConsignacion && !existe.consignacion) campos.consignacion=true;
+      if(Object.keys(campos).length){
+        try{ const u=await api.update(existe.id,campos,TABLE_CLIENTES); setClientes(cs=>cs.map(c=>c.id===existe.id?u:c)); return u; }catch(e){ return existe; }
       }
       return existe;
     }
     try{
-      const n=await api.create({nombre:nom,telefono:normUbic(telefono)},TABLE_CLIENTES);
+      const n=await api.create({nombre:nom,telefono:normUbic(telefono),consignacion:!!esConsignacion},TABLE_CLIENTES);
       setClientes(cs=>[...cs,n]);
       return n;
     }catch(e){ notify("No se pudo agregar el cliente: "+e.message,"error"); return null; }
@@ -2930,9 +3001,11 @@ function App(){
       }
       // ALTA: viene un ARRAY de ventas (uno o varios productos, comparten datos generales)
       const ventas = Array.isArray(data) ? data : [data];
+      // Número de venta compartido: agrupa todos los productos de esta misma operación
+      const nroVenta = "V"+Date.now();
       let okCount=0;
       for(const f of ventas){
-        const n=await api.create(f,TABLE_V);
+        const n=await api.create({...f, nro_venta:nroVenta},TABLE_V);
         setVentas(vs=>[...vs,n]);
         const ok=await procesarStockVenta(f,n.id);
         if(ok) okCount++;
