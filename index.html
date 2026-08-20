@@ -1159,6 +1159,27 @@ const ESTADO_COLOR = {
 };
 
 // Calcula importe, costo total y margen de una venta
+// ===== Ordenamiento reutilizable (misma lógica que Inventario) =====
+// Ordena un array por la clave y dirección dados. Números por valor real, texto alfabético.
+function sortData(arr, key, dir, numericKeys=[]){
+  if(!key) return arr;
+  return [...arr].sort((a,b)=>{
+    let x=a[key], y=b[key];
+    if(numericKeys.includes(key)){ x=Number(x)||0; y=Number(y)||0; }
+    else { x=(x??"").toString().toLowerCase(); y=(y??"").toString().toLowerCase(); }
+    return x<y?-dir:x>y?dir:0;
+  });
+}
+// Devuelve un <th> clickeable con indicador ▲/▼, igual estilo que Inventario.
+function ThSort({k,label,sort,setSort,align="left",cls=""}){
+  return (
+    <th onClick={()=>setSort(s=>({k, dir:s.k===k?-s.dir:1}))}
+      className={`px-2 py-2 text-${align} text-[10px] font-semibold uppercase tracking-wide text-sand-600 cursor-pointer hover:text-ink whitespace-nowrap select-none ${cls}`}>
+      {label} {sort.k===k?(sort.dir===1?"▲":"▼"):""}
+    </th>
+  );
+}
+
 function calcVenta(f){
   const cant  = Number(f.cantidad)||0;
   const pu    = Number(f.precio_unitario)||0;
@@ -1789,6 +1810,8 @@ function VentasPanel({ventas,role,onNew,onEdit,onAnular}){
   const [q,setQ]=useState("");
   const [fe,setFe]=useState("");
   const [vista,setVista]=useState("detalle"); // "detalle" | "resumen"
+  const [sort,setSort]=useState({k:"fecha",dir:-1});
+  const [sortRes,setSortRes]=useState({k:"fecha",dir:-1});
   const [page,setPage]=useState(1); const perPage=15;
   // Estados disponibles en el filtro: los fijos + cualquiera que ya exista en las ventas
   const estadosDisponibles=[...new Set([...ESTADOS_VENTA, ...ventas.map(v=>v.estado).filter(Boolean)])];
@@ -1826,8 +1849,12 @@ function VentasPanel({ventas,role,onNew,onEdit,onAnular}){
 
   const totalRegistros = vista==="resumen" ? resumen.length : filtered.length;
   const pages=Math.max(1,Math.ceil(totalRegistros/perPage));
-  const view=filtered.slice((page-1)*perPage,page*perPage);
-  const viewResumen=resumen.slice((page-1)*perPage,page*perPage);
+  // Ordenar según la columna elegida (números por valor real, texto alfabético)
+  const NUM_VENTA=["cantidad","precio_unitario","importe_total","costo_unitario"];
+  const detalleOrdenado=sortData(filtered, sort.k, sort.dir, NUM_VENTA);
+  const view=detalleOrdenado.slice((page-1)*perPage,page*perPage);
+  const resumenOrdenado=sortData(resumen, sortRes.k, sortRes.dir, ["items","total"]);
+  const viewResumen=resumenOrdenado.slice((page-1)*perPage,page*perPage);
   useEffect(()=>{setPage(1);},[q,fe,vista]);
   return (
     <div className="fade">
@@ -1851,8 +1878,14 @@ function VentasPanel({ventas,role,onNew,onEdit,onAnular}){
         <div className="bg-white rounded-2xl border border-sand-200 shadow-sm overflow-x-auto">
           <table className="w-full text-xs sm:text-sm">
             <thead className="bg-sand-100 border-b border-sand-200"><tr>
-              {["Fecha","N° Venta","Cliente","Vendedora","Estado","Contenedor","Productos","Total"].map(h=>
-                <th key={h} className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-sand-600 whitespace-nowrap">{h}</th>)}
+              <ThSort k="fecha" label="Fecha" sort={sortRes} setSort={setSortRes}/>
+              <ThSort k="nro" label="N° Venta" sort={sortRes} setSort={setSortRes}/>
+              <ThSort k="cliente" label="Cliente" sort={sortRes} setSort={setSortRes}/>
+              <ThSort k="vendedora" label="Vendedora" sort={sortRes} setSort={setSortRes}/>
+              <ThSort k="estado" label="Estado" sort={sortRes} setSort={setSortRes}/>
+              <ThSort k="contenedor" label="Contenedor" sort={sortRes} setSort={setSortRes}/>
+              <ThSort k="items" label="Productos" sort={sortRes} setSort={setSortRes}/>
+              <ThSort k="total" label="Total" sort={sortRes} setSort={setSortRes}/>
             </tr></thead>
             <tbody>
               {viewResumen.length===0 && <tr><td colSpan="8" className="text-center py-8 text-sand-500">Sin ventas</td></tr>}
@@ -1876,8 +1909,21 @@ function VentasPanel({ventas,role,onNew,onEdit,onAnular}){
         <table className="w-full text-xs sm:text-sm table-auto">
           <thead className="bg-sand-100 border-b border-sand-200">
             <tr>
-              {["Fecha","Producto","Modelo","Medida","Cant.","Condición","Factura","P.Unit","Total","Costo","Margen","Estado","Cliente","Teléfono","Vendedora"].map(h=>
-                <th key={h} className="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-sand-600 whitespace-nowrap">{h}</th>)}
+              <ThSort k="fecha" label="Fecha" sort={sort} setSort={setSort}/>
+              <ThSort k="producto" label="Producto" sort={sort} setSort={setSort}/>
+              <ThSort k="modelo" label="Modelo" sort={sort} setSort={setSort}/>
+              <ThSort k="medida" label="Medida" sort={sort} setSort={setSort}/>
+              <ThSort k="cantidad" label="Cant." sort={sort} setSort={setSort}/>
+              <ThSort k="condicion" label="Condición" sort={sort} setSort={setSort}/>
+              <ThSort k="facturacion" label="Factura" sort={sort} setSort={setSort}/>
+              <ThSort k="precio_unitario" label="P.Unit" sort={sort} setSort={setSort}/>
+              <ThSort k="importe_total" label="Total" sort={sort} setSort={setSort}/>
+              <ThSort k="costo_unitario" label="Costo" sort={sort} setSort={setSort}/>
+              <th className="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-sand-600 whitespace-nowrap">Margen</th>
+              <ThSort k="estado" label="Estado" sort={sort} setSort={setSort}/>
+              <ThSort k="cliente" label="Cliente" sort={sort} setSort={setSort}/>
+              <ThSort k="telefono" label="Teléfono" sort={sort} setSort={setSort}/>
+              <ThSort k="vendedora" label="Vendedora" sort={sort} setSort={setSort}/>
               <th className="px-2 py-2 text-right text-[10px] font-semibold uppercase text-sand-600">Acciones</th>
             </tr>
           </thead>
@@ -1936,6 +1982,7 @@ function VentasPanel({ventas,role,onNew,onEdit,onAnular}){
 
 function VentasAnuladasPanel({ventas,role,onRestaurar,onEliminar}){
   const [q,setQ]=useState("");
+  const [sort,setSort]=useState({k:"fecha",dir:-1});
   const filtered=useMemo(()=>{
     const list=[...ventas].filter(v=>v.anulada).sort((a,b)=>{
       const d=(b.fecha_anulacion||b.fecha||"").localeCompare(a.fecha_anulacion||a.fecha||"");
@@ -1949,6 +1996,7 @@ function VentasAnuladasPanel({ventas,role,onRestaurar,onEliminar}){
       (v.modelo||"").toLowerCase().includes(f)
     );
   },[ventas,q]);
+  const ordenado=sortData(filtered, sort.k, sort.dir, ["cantidad","importe_total"]);
   return (
     <div className="fade">
       <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
@@ -1959,13 +2007,20 @@ function VentasAnuladasPanel({ventas,role,onRestaurar,onEliminar}){
         <table className="w-full text-sm">
           <thead className="bg-sand-100 border-b border-sand-200">
             <tr>
-              {["Fecha venta","Anulada el","Producto","Modelo","Cant.","Total","Cliente","Vendedora","Motivo"].map(h=>
-                <th key={h} className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-sand-600 whitespace-nowrap">{h}</th>)}
+              <ThSort k="fecha" label="Fecha venta" sort={sort} setSort={setSort}/>
+              <ThSort k="fecha_anulacion" label="Anulada el" sort={sort} setSort={setSort}/>
+              <ThSort k="producto" label="Producto" sort={sort} setSort={setSort}/>
+              <ThSort k="modelo" label="Modelo" sort={sort} setSort={setSort}/>
+              <ThSort k="cantidad" label="Cant." sort={sort} setSort={setSort}/>
+              <ThSort k="importe_total" label="Total" sort={sort} setSort={setSort}/>
+              <ThSort k="cliente" label="Cliente" sort={sort} setSort={setSort}/>
+              <ThSort k="vendedora" label="Vendedora" sort={sort} setSort={setSort}/>
+              <ThSort k="motivo_anulacion" label="Motivo" sort={sort} setSort={setSort}/>
               <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-sand-600">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map(v=>(
+            {ordenado.map(v=>(
               <tr key={v.id} className="border-b border-sand-100 hover:bg-sand-50 bg-red-50/30">
                 <td className="px-3 py-2 whitespace-nowrap">{v.fecha}</td>
                 <td className="px-3 py-2 whitespace-nowrap text-sand-600">{v.fecha_anulacion||"—"}</td>
@@ -2817,41 +2872,60 @@ function App(){
     const cant=Number(cantidad)||0;
     const disp=Number(prod.stock)||0;
     const cli=normUbic(cliente);
-    // Validaciones (defensa en profundidad; el modal ya valida)
+    // 1-2) Validaciones: producto y cliente
+    if(!prod || !prod.id){ notify("No hay producto seleccionado","error"); return false; }
     if(cant<=0){ notify("La cantidad debe ser mayor a 0","error"); return false; }
     if(cant>disp){ notify(`No podés pasar más de ${disp} unidad(es)`,"error"); return false; }
-    if(!cli || cli==="Depósito"){ notify("Elegí un cliente para la consignación","error"); return false; }
+    if(!cli || cli==="Depósito"){ notify("Elegí un cliente de consignación","error"); return false; }
     try{
-      // 1) Descontar del producto de origen
-      const ns=disp-cant;
-      const up=await api.update(prod.id,{stock:ns},TABLE);
-      setRows(rs=>rs.map(r=>r.id===prod.id?up:r));
-      // 2) Buscar si ya existe ese modelo en consignación para ese cliente → sumar
+      // Buscar si ya existe ese modelo en consignación para ese cliente
       const existente=rows.find(r=>r.id!==prod.id
         && (r.codigo||"")===(prod.codigo||"")
         && normUbic(r.contenedor).toUpperCase()===CONSIGNACION
         && normUbic(r.cliente).toLowerCase()===cli.toLowerCase());
+
+      // PASO 1 (primero): crear/actualizar el registro en CONSIGNACIÓN.
+      // Si esto falla, NO tocamos el stock general (evita operación parcial).
+      let consignResult=null;
       if(existente){
-        const upc=await api.update(existente.id,{stock:(Number(existente.stock)||0)+cant},TABLE);
-        setRows(rs=>rs.map(r=>r.id===existente.id?upc:r));
+        consignResult=await api.update(existente.id,{stock:(Number(existente.stock)||0)+cant},TABLE);
       } else {
-        // Crear registro nuevo en consignación (mismo modelo, cliente asignado)
+        // Código propio para no colisionar con el código único del producto original
+        const codigoConsig=`${prod.codigo||"PROD"}-C`;
         const nuevo={
-          codigo:prod.codigo, nombre:prod.nombre, color:prod.color||"", medidas:prod.medidas||"",
+          codigo:codigoConsig, nombre:prod.nombre, color:prod.color||"", medidas:prod.medidas||"",
           mes_compra:prod.mes_compra||"", anio_compra:prod.anio_compra||"", contenedor:CONSIGNACION,
           stock:cant, precio_compra:prod.precio_compra||0, moneda:prod.moneda||"USD",
-          proveedor:prod.proveedor||"", observaciones:`Traspaso desde ${prod.contenedor}`, consignacion:true, cliente:cli
+          proveedor:prod.proveedor||"", observaciones:`Traspaso desde ${prod.contenedor} · cód. origen ${prod.codigo||""}`,
+          consignacion:true, cliente:cli
         };
-        const nc=await api.create(nuevo,TABLE);
-        setRows(rs=>[...rs,nc]);
+        consignResult=await api.create(nuevo,TABLE);
       }
-      // 3) Registrar el movimiento (trazabilidad)
+      if(!consignResult){ notify("No se pudo crear el registro de consignación. El stock general NO se modificó.","error"); return false; }
+
+      // PASO 2 (solo si el paso 1 funcionó): descontar del stock general
+      const ns=disp-cant;
+      const up=await api.update(prod.id,{stock:ns},TABLE);
+
+      // Actualizar el estado local con ambos cambios ya confirmados
+      setRows(rs=>{
+        let next=rs.map(r=>r.id===prod.id?up:r);
+        if(existente){ next=next.map(r=>r.id===existente.id?consignResult:r); }
+        else { next=[...next, consignResult]; }
+        return next;
+      });
+
+      // PASO 3) Trazabilidad
       logMovimiento({accion:"Traspaso a Consignación",producto:`${prod.codigo} · ${prod.nombre}`,contenedor:prod.contenedor,producto_id:prod.id,
         stock_anterior:disp,stock_nuevo:ns,costo_anterior:prod.precio_compra,costo_nuevo:prod.precio_compra,
         observaciones:`${cant}u de ${prod.contenedor} → Consignación (${cli})`});
-      notify(`${cant}u de "${prod.nombre}" pasada(s) a consignación (${cli})`);
+      notify(`${cant}u de "${prod.nombre}" pasada(s) a consignación de ${cli}`);
       return true;
-    }catch(e){ notify("Error en el traspaso: "+e.message,"error"); return false; }
+    }catch(e){
+      notify("Error en el traspaso: "+e.message+" · El stock general NO se modificó.","error");
+      logEvent("error","Error en traspaso a consignación: "+e.message,"error");
+      return false;
+    }
   };
 
   const save=async(f)=>{
