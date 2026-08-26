@@ -1144,12 +1144,16 @@ const CONDICIONES = [
   {label:"Minorista", desc:0},
   {label:"Minorista 10%", desc:10},
   {label:"Minorista 20%", desc:20},
+  {label:"Minorista 25%", desc:25},
   {label:"Minorista 30%", desc:30},
   {label:"Mayorista", desc:0},
   {label:"Consignación", desc:0},
+  {label:"Canje", desc:0},
 ];
 // Condición que NO descuenta stock
 const CONDICION_SIN_DESCUENTO = "Consignación";
+// Condición que pone el importe en $0 pero SÍ descuenta stock
+const CONDICION_CANJE = "Canje";
 const FACTURACION = ["Sin Factura","Factura A"];
 // Colores de referencia para el estado
 const ESTADO_COLOR = {
@@ -1185,7 +1189,8 @@ function calcVenta(f){
   const pu    = Number(f.precio_unitario)||0;
   const desc  = (CONDICIONES.find(c=>c.label===f.condicion)||{desc:0}).desc;
   const puNeto= pu*(1-desc/100);
-  const canje = !!f.canje;
+  // Canje: por el checkbox canje o por la condición "Canje" → importe 0
+  const canje = !!f.canje || f.condicion===CONDICION_CANJE;
   const importe = canje ? 0 : cant*puNeto;          // en canje no hay ingreso de dinero
   const costoU  = Number(f.costo_unitario)||0;
   const costoT  = cant*costoU;
@@ -1252,15 +1257,20 @@ function ClientesPanel({clientes,onAdd,onUpdate,onDelete}){
   const [esConsig,setEsConsig]=useState(false);
   const [confirmDel,setConfirmDel]=useState(null);
   const [page,setPage]=useState(1); const perPage=15;
+  const [sort,setSort]=useState({k:"nombre",dir:1});
+  const [filtroConsig,setFiltroConsig]=useState(""); // "" | "si" | "no"
   const inp=FieldInp;
 
   const filtrados=(clientes||[]).filter(c=>{
     const t=q.toLowerCase();
-    return !t || normUbic(c.nombre).toLowerCase().includes(t) || (c.telefono||"").toLowerCase().includes(t);
-  }).sort((a,b)=>normUbic(a.nombre).localeCompare(normUbic(b.nombre)));
-  const pages=Math.max(1,Math.ceil(filtrados.length/perPage));
-  const view=filtrados.slice((page-1)*perPage,page*perPage);
-  useEffect(()=>{setPage(1);},[q]);
+    const matchTexto = !t || normUbic(c.nombre).toLowerCase().includes(t) || (c.telefono||"").toLowerCase().includes(t);
+    const matchConsig = !filtroConsig || (filtroConsig==="si"?c.consignacion===true:!c.consignacion);
+    return matchTexto && matchConsig;
+  });
+  const ordenados=sortData(filtrados, sort.k, sort.dir, []);
+  const pages=Math.max(1,Math.ceil(ordenados.length/perPage));
+  const view=ordenados.slice((page-1)*perPage,page*perPage);
+  useEffect(()=>{setPage(1);},[q,filtroConsig]);
 
   const abrirNuevo=()=>{ setEditando(null); setNombre(""); setTelefono(""); setEsConsig(false); setShowForm(true); };
   const abrirEditar=(c)=>{ setEditando(c); setNombre(c.nombre); setTelefono(c.telefono||""); setEsConsig(!!c.consignacion); setShowForm(true); };
@@ -1280,13 +1290,21 @@ function ClientesPanel({clientes,onAdd,onUpdate,onDelete}){
         </div>
         <button onClick={abrirNuevo} className="px-5 py-2.5 rounded-xl bg-ink text-white hover:bg-sand-900 font-semibold">+ Agregar cliente</button>
       </div>
-      <div className="mb-3">
+      <div className="mb-3 flex gap-2 flex-wrap">
         <input className={inp+" max-w-sm"} value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar por nombre o teléfono…"/>
+        <select className={inp} value={filtroConsig} onChange={e=>setFiltroConsig(e.target.value)}>
+          <option value="">Todos</option>
+          <option value="si">Solo consignación</option>
+          <option value="no">Sin consignación</option>
+        </select>
       </div>
       <div className="bg-white rounded-2xl border border-sand-200 shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-sand-100 border-b border-sand-200"><tr>
-            {["Cliente","Teléfono","Consignación","Acciones"].map(h=><th key={h} className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-sand-600">{h}</th>)}
+            <ThSort k="nombre" label="Cliente" sort={sort} setSort={setSort} cls="px-4 py-2.5"/>
+            <ThSort k="telefono" label="Teléfono" sort={sort} setSort={setSort} cls="px-4 py-2.5"/>
+            <ThSort k="consignacion" label="Consignación" sort={sort} setSort={setSort} cls="px-4 py-2.5"/>
+            <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-sand-600">Acciones</th>
           </tr></thead>
           <tbody>
             {view.length===0 && <tr><td colSpan="4" className="text-center py-8 text-sand-500">Sin clientes</td></tr>}
@@ -1443,6 +1461,7 @@ function VentaEditForm({venta,onSave,onClose,productos,clientes=[],onAddCliente}
   return (
     <Modal title="Editar venta" onClose={onClose} noBackdropClose={true} wide={true}>
       {err && <div className="text-red-600 text-sm mb-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</div>}
+      {venta.nro_venta && <div className="mb-3 inline-block px-3 py-1 rounded-lg bg-sand-100 text-sm"><span className="text-sand-500">Venta N°</span> <b className="font-mono">{venta.nro_venta}</b></div>}
       <p className="text-xs text-sand-500 mb-4">Editá los campos que necesites. Al ver el resumen, los cambios aparecen en negrita.</p>
       <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         <Field label="Fecha *"><input type="date" className={inp} value={(f.fecha||"").slice(0,10)} onChange={e=>set('fecha',e.target.value)}/></Field>
@@ -1909,6 +1928,7 @@ function VentasPanel({ventas,role,onNew,onEdit,onAnular}){
         <table className="w-full text-xs sm:text-sm table-auto">
           <thead className="bg-sand-100 border-b border-sand-200">
             <tr>
+              <ThSort k="nro_venta" label="N° Venta" sort={sort} setSort={setSort}/>
               <ThSort k="fecha" label="Fecha" sort={sort} setSort={setSort}/>
               <ThSort k="producto" label="Producto" sort={sort} setSort={setSort}/>
               <ThSort k="modelo" label="Modelo" sort={sort} setSort={setSort}/>
@@ -1932,6 +1952,7 @@ function VentasPanel({ventas,role,onNew,onEdit,onAnular}){
               const c=calcVenta(v);
               return (
               <tr key={v.id} className="border-b border-sand-100 hover:bg-sand-50">
+                <td className="px-2 py-1.5 whitespace-nowrap font-mono text-xs font-semibold text-ink">{v.nro_venta||"—"}</td>
                 <td className="px-2 py-1.5 whitespace-nowrap">{v.fecha}</td>
                 <td className="px-2 py-1.5 text-ink"><div className="line-clamp-2 leading-tight max-w-[180px]" title={v.producto}>{v.producto}</div></td>
                 <td className="px-2 py-1.5 font-mono text-xs text-sand-600">{v.modelo}</td>
@@ -1964,7 +1985,7 @@ function VentasPanel({ventas,role,onNew,onEdit,onAnular}){
               </tr>
               );
             })}
-            {view.length===0 && <tr><td colSpan="16" className="text-center py-8 text-sand-500">Sin ventas registradas</td></tr>}
+            {view.length===0 && <tr><td colSpan="17" className="text-center py-8 text-sand-500">Sin ventas registradas</td></tr>}
           </tbody>
         </table>
       </div>
@@ -2788,6 +2809,14 @@ function App(){
   const [showForm,setShowForm]=useState(false);
   const [confirm,setConfirm]=useState(null);
   const [ventas,setVentas]=useState([]);
+  // Ref siempre actualizado con las ventas, para calcular el correlativo sin depender del render
+  const ventasRef=useRef([]);
+  useEffect(()=>{ ventasRef.current=ventas; },[ventas]);
+  // Mayor número de venta correlativo existente (ignora los viejos con formato "V123..." si quedara alguno)
+  const ventas_maxNro=()=>ventasRef.current.reduce((mx,v)=>{
+    const n=Number(v.nro_venta);
+    return (Number.isFinite(n) && n>mx) ? n : mx;
+  },0);
   const [clientes,setClientes]=useState([]);
   const [showVentaForm,setShowVentaForm]=useState(false);
   const [editingVenta,setEditingVenta]=useState(null);
@@ -3049,7 +3078,9 @@ function App(){
       // EDICIÓN: viene un objeto (una sola venta). Reajusta stock solo por la DIFERENCIA de cantidad.
       if(editingVenta && !Array.isArray(data)){
         const original=editingVenta;
-        const u=await api.update(editingVenta.id,data,TABLE_V);
+        // Garantizar que la edición conserve el número de venta original
+        const dataConNro={...data, nro_venta: original.nro_venta};
+        const u=await api.update(editingVenta.id,dataConNro,TABLE_V);
         setVentas(vs=>vs.map(v=>v.id===editingVenta.id?u:v));
         // Reajuste de stock: solo si la venta NO es consignación y cambió la cantidad del mismo producto
         const eraConsig = original.condicion===CONDICION_SIN_DESCUENTO;
@@ -3075,8 +3106,17 @@ function App(){
       }
       // ALTA: viene un ARRAY de ventas (uno o varios productos, comparten datos generales)
       const ventas = Array.isArray(data) ? data : [data];
-      // Número de venta compartido: agrupa todos los productos de esta misma operación
-      const nroVenta = "V"+Date.now();
+      // Número de venta CORRELATIVO persistente (1, 2, 3…). No se reutiliza aunque se borre una venta.
+      // Se toma el mayor entre: (a) el mayor nro_venta de las ventas en memoria (incluidas anuladas),
+      // y (b) un contador guardado en localStorage que nunca baja. Así, si se elimina la última venta,
+      // el contador sigue avanzando y no reutiliza el número.
+      const maxEnVentas = ventas_maxNro();
+      const maxGuardado = Number(localStorage.getItem("mercer_ultimo_nro_venta")||"0");
+      let nroVenta = Math.max(maxEnVentas, maxGuardado) + 1;
+      const yaExiste=(n)=>ventasRef.current.some(v=>Number(v.nro_venta)===n);
+      let intentos=0;
+      while(yaExiste(nroVenta) && intentos<50){ nroVenta++; intentos++; }
+      localStorage.setItem("mercer_ultimo_nro_venta", String(nroVenta)); // persiste el último usado
       let okCount=0;
       for(const f of ventas){
         const n=await api.create({...f, nro_venta:nroVenta},TABLE_V);
@@ -3085,7 +3125,7 @@ function App(){
         if(ok) okCount++;
       }
       if(okCount>0){
-        notify(`${okCount} ${okCount===1?"producto registrado":"productos registrados"} en la venta`);
+        notify(`Venta N° ${nroVenta} registrada · ${okCount} ${okCount===1?"producto":"productos"}`);
       }
       setShowVentaForm(false); setEditingVenta(null);
     }catch(e){ notify(e.message,"error"); logEvent("error","Error al guardar venta: "+e.message,"error"); }
