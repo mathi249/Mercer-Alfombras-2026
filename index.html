@@ -1189,12 +1189,13 @@ function calcVenta(f){
   const pu    = Number(f.precio_unitario)||0;
   const desc  = (CONDICIONES.find(c=>c.label===f.condicion)||{desc:0}).desc;
   const puNeto= pu*(1-desc/100);
-  // Canje: por el checkbox canje o por la condición "Canje" → importe 0
-  const canje = !!f.canje || f.condicion===CONDICION_CANJE;
-  const importe = canje ? 0 : cant*puNeto;          // en canje no hay ingreso de dinero
+  // El checkbox "canje" (legacy) sigue forzando importe 0. La CONDICIÓN "Canje" NO fuerza:
+  // el precio es editable (0 por defecto) y el importe se calcula con lo que se cargó.
+  const canje = !!f.canje;
+  const importe = canje ? 0 : cant*puNeto;
   const costoU  = Number(f.costo_unitario)||0;
   const costoT  = cant*costoU;
-  const margen  = importe-costoT;                    // ganancia en dinero
+  const margen  = importe-costoT;
   const margenPct = importe>0 ? (margen/importe)*100 : (canje ? -100 : 0);
   return { cant, pu, desc, puNeto, canje, importe, costoU, costoT, margen, margenPct };
 }
@@ -1436,7 +1437,7 @@ function VentaEditForm({venta,onSave,onClose,productos,clientes=[],onAddCliente}
     if(!f.fecha){ setErr("La fecha es obligatoria."); return false; }
     if(!f.producto || !String(f.producto).trim()){ setErr("El producto es obligatorio."); return false; }
     if((Number(f.cantidad)||0)<=0){ setErr("La cantidad debe ser mayor a 0."); return false; }
-    if((Number(f.precio_unitario)||0)<=0){ setErr("El precio unitario es obligatorio."); return false; }
+    if(f.condicion!==CONDICION_CANJE && (Number(f.precio_unitario)||0)<=0){ setErr("El precio unitario es obligatorio."); return false; }
     if(!f.condicion){ setErr("La condición es obligatoria."); return false; }
     if(!f.vendedora || !String(f.vendedora).trim()){ setErr("La vendedora es obligatoria."); return false; }
     if(!f.estado){ setErr("El estado es obligatorio."); return false; }
@@ -1603,7 +1604,7 @@ function VentaForm({initial,onSave,onClose,productos,clientes=[],onAddCliente}){
     if(!f.producto.trim() || !f.producto_id){ setErr("Elegí un producto de la lista."); return false; }
     const cant=Number(f.cantidad)||0;
     if(cant<=0){ setErr("La cantidad debe ser mayor a 0."); return false; }
-    if((Number(f.precio_unitario)||0)<=0){ setErr("El precio unitario es obligatorio."); return false; }
+    if(gen.condicion!==CONDICION_CANJE && (Number(f.precio_unitario)||0)<=0){ setErr("El precio unitario es obligatorio."); return false; }
     // Validación de stock acumulada (suma de lo cargado del mismo producto no supera el stock)
     if(!esConsig && stockDisp!==null){
       if(stockDisp<=0){ setErr("Ese producto no tiene stock disponible."); return false; }
